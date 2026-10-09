@@ -14,7 +14,7 @@ def render_medication_table(medications: pd.DataFrame) -> None:
     #It provides an interactive table and these options hide the row index and fill the available width.
     st.dataframe(medications, hide_index=True, width="stretch")
     
-def render_stock_chart(medications: pd.DataFrame) -> None:
+def render_stock_chart(medications: pd.DataFrame, key_prefix: str = "inventory") -> None:
     """ Display the sample stock quantities, grouped by stock unit. """
     st.subheader("Sample stock quantities")
     st.caption(
@@ -44,4 +44,8 @@ def render_stock_chart(medications: pd.DataFrame) -> None:
             cliponaxis=False,
         )
         figure.update_xaxes(rangemode="tozero")
-        st.plotly_chart(figure, width="stretch")
+        st.plotly_chart(
+            figure, 
+            width="stretch",
+            key=f"{key_prefix}_stock_{stock_unit}",
+        )

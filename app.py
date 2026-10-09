@@ -13,6 +13,7 @@ from src.ui.components import (
     render_medication_table,
     render_stock_chart,
 )
+from src.ui.navigation import render_role_tabs
 
 def main() -> None:
     """ COnfigure the application and render the initial landing page. """
@@ -30,21 +31,26 @@ def main() -> None:
         "A medication-focused dashboard for clinical availability, "
         "inventory operations, and executive oversight."
     )
-    
-    # Display the confirmed labels while we build the foundation.
-    st.subheader("Planned dashboard audiences")
-    
-    for label in ROLE_LABELS.values():
-        st.markdown(f"- {label}")
         
     try:
         medications = load_medications()
     except (OSError, ValueError) as error:
         st.error(f"Unable to load medication data: {error}")
-        
-    render_medication_table(medications)
+        return
     
-    render_stock_chart(medications)
+    st.caption("Demo audience views - no sign-in or access control.")
+    role_tabs = render_role_tabs()
+    
+    # Match each stable role ID to its tab container.
+    
+    for role_id, role_tab in zip(ROLE_LABELS, role_tabs, strict=True):
+        with role_tab:
+            st.subheader(ROLE_LABELS[role_id])
+            
+            render_medication_table(medications)
+            render_stock_chart(medications, key_prefix=role_id)
+        
+    
         
 if __name__ == "__main__":
     main()
