@@ -1,0 +1,15 @@
+# Local Python environment
+.venv/
+
+# Python cache files
+__pycache__/
+*.py[cod]
+
+# macOS files
+.DS_Store
+
+# Local secrets
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
