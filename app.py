@@ -9,7 +9,10 @@ from src.config import (
     ROLE_LABELS,
 )
 from src.data.loader import load_medications
-from src.ui.components import render_medication_table
+from src.ui.components import (
+    render_medication_table,
+    render_stock_chart,
+)
 
 def main() -> None:
     """ COnfigure the application and render the initial landing page. """
@@ -40,6 +43,8 @@ def main() -> None:
         st.error(f"Unable to load medication data: {error}")
         
     render_medication_table(medications)
+    
+    render_stock_chart(medications)
         
 if __name__ == "__main__":
     main()
