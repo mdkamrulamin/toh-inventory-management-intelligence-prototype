@@ -1,0 +1,7 @@
+medication_id,medication_name,category,stock_unit,current_stock,unit_cost,average_monthly_consumption,expiry_date,supplier,status
+MED001,Paracetamol 500 mg,Tablet,tablet,1200,0.08,800,2027-06-30,Demo Supplier A,In stock
+MED002,Amoxicillin 500 mg,Capsule,capsule,600,0.25,450,2027-09-30,Demo Supplier B,In stock
+MED003,Ibuprofen 200 mg,Tablet,tablet,0,0.12,500,2027-12-31,Demo Supplier A,Out of stock
+MED004,Metformin 500 mg,Tablet,tablet,900,0.10,700,2028-03-31,Demo Supplier C,In stock
+MED005,Omeprazole 20 mg,Capsule,capsule,350,0.30,250,2027-08-31,Demo Supplier B,In stock
+MED006,Ceftriaxone 1 g,Injection,vial,80,4.50,60,2027-11-30,Demo Supplier C,In stock
