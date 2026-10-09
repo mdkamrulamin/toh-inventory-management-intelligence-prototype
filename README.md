@@ -123,3 +123,17 @@ In the running app, verify that:
 ## Next development stage
 
 Add a demonstration role selector and separate dashboard views for the four planned audiences. Inventory rules and metrics will be introduced as research findings and project requirements are confirmed.
+
+## Team and contributions
+
+Developed by ELG 5902 Group 5:
+
+- Md Kamrul Hasan Bin Amin
+- Maria
+- Maryam
+- Mohtasim
+- Sai Prasanna
+
+The prototype incorporates the team’s research findings, process analysis,
+inventory frameworks, and dashboard requirements, alongside software
+implementation.
