@@ -8,6 +8,8 @@ from src.config import (
     PROTOTYPE_NOTICE,
     ROLE_LABELS,
 )
+from src.data.loader import load_medications
+from src.ui.components import render_medication_table
 
 def main() -> None:
     """ COnfigure the application and render the initial landing page. """
@@ -31,6 +33,13 @@ def main() -> None:
     
     for label in ROLE_LABELS.values():
         st.markdown(f"- {label}")
+        
+    try:
+        medications = load_medications()
+    except (OSError, ValueError) as error:
+        st.error(f"Unable to load medication data: {error}")
+        
+    render_medication_table(medications)
         
 if __name__ == "__main__":
     main()
