@@ -49,3 +49,8 @@ def render_stock_chart(medications: pd.DataFrame, key_prefix: str = "inventory")
             width="stretch",
             key=f"{key_prefix}_stock_{stock_unit}",
         )
+        
+def render_feature_placeholder(title: str, description: str) -> None:
+    """Display a planned dashboard section without inventing its logic."""
+    st.subheader(title)
+    st.info(f"Planned feature: {description}")
