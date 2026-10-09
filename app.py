@@ -9,10 +9,7 @@ from src.config import (
     ROLE_LABELS,
 )
 from src.data.loader import load_medications
-from src.ui.components import (
-    render_medication_table,
-    render_stock_chart,
-)
+from src.ui.views import ROLE_RENDERERS
 from src.ui.navigation import render_role_tabs
 
 def main() -> None:
@@ -46,9 +43,7 @@ def main() -> None:
     for role_id, role_tab in zip(ROLE_LABELS, role_tabs, strict=True):
         with role_tab:
             st.subheader(ROLE_LABELS[role_id])
-            
-            render_medication_table(medications)
-            render_stock_chart(medications, key_prefix=role_id)
+            ROLE_RENDERERS[role_id](medications)
         
     
         
