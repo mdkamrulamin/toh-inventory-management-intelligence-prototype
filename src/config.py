@@ -19,4 +19,4 @@ ROLE_LABELS: dict[str, str] = {
 
 # Resolve data paths from project loc
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-SAMPLE_MEDICATIONS_PATH = PROJECT_ROOT / "data" / "sample_medications.csv"
+SAMPLE_MEDICATIONS_PATH = PROJECT_ROOT / "data" / "sample_medications_extended.csv"

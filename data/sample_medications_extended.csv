@@ -1,0 +1,7 @@
+medication_id,medication_name,category,stock_unit,current_stock,unit_cost,average_monthly_consumption,expiry_date,supplier,status,primary_location,reorder_point,safety_stock_level,lead_time_days,last_count_date,counted_stock
+MED001,Paracetamol 500 mg,Tablet,tablet,1200,0.08,800,2027-06-30,Demo Supplier A,In stock,Demo Shelf A1,800,200,7,2026-10-10,1195
+MED002,Amoxicillin 500 mg,Capsule,capsule,600,0.25,450,2027-09-30,Demo Supplier B,In stock,Demo Shelf B1,500,150,10,2026-10-10,600
+MED003,Ibuprofen 200 mg,Tablet,tablet,0,0.12,500,2027-12-31,Demo Supplier A,Out of stock,Demo Shelf A2,300,100,7,2026-10-10,0
+MED004,Metformin 500 mg,Tablet,tablet,900,0.10,700,2028-03-31,Demo Supplier C,In stock,Demo Shelf A3,650,200,14,2026-10-10,895
+MED005,Omeprazole 20 mg,Capsule,capsule,350,0.30,250,2027-08-31,Demo Supplier B,In stock,Demo Shelf B2,300,100,10,2026-10-10,350
+MED006,Ceftriaxone 1 g,Injection,vial,80,4.50,60,2027-11-30,Demo Supplier C,In stock,Demo Shelf C1,90,30,5,2026-10-10,80
