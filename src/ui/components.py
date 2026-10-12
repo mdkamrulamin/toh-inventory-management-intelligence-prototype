@@ -4,9 +4,12 @@ import pandas as pd
 import streamlit as st
 import plotly.express as px
 
-def render_medication_table(medications: pd.DataFrame) -> None:
-    """ Display the synthetic medication inventory """
-    st.subheader("Sample medication inventory")
+def render_medication_table(
+    medications: pd.DataFrame,
+    title: str = "Sample medication inventory",
+) -> None:
+    """ Display medication information using a reusable table."""
+    st.subheader(title)
     st.caption(
         "Synthetic demonstration data. Stock quntities use the unit shown in each row."
     )
