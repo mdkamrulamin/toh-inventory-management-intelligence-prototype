@@ -31,6 +31,14 @@ def render_executive_view(medications: pd.DataFrame) -> None:
         
     render_stock_chart(medications, key_prefix="executive")
     
+    # Turnover needs an agreed definition and reporting-period data.
+    render_feature_placeholder(
+        "Inventory turnover",
+        "Display inventory turnover for an agreed reporting period. "
+        "The definition and supporting historical data are pending; "
+        "no turnover value is calculated yet.",
+    )
+    
     #Executive indicators that will follow team's requirements
     render_feature_placeholder(
         "Inventory performance KPIs",
