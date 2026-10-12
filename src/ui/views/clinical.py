@@ -78,15 +78,25 @@ def render_clinical_view(medications: pd.DataFrame) -> None:
                 )
     
     #Detailed content and rules will follow confirmed requirements from team
+    #Request previews do not create requests or clinical approvals.
     render_feature_placeholder(
-        "Substitute-product information",
-        "Display reviewed alternative-product information. "
-        "No substitute recommendations are implemented yet.",
+        "Clinical/pharmacy review status",
+        "Request preview only. No request has been submitted "
+        "and no clinical/pharmacy approval is recorded.",
+    )
+    
+    #Research describs substitue info, not validated equivalence.  
+    render_feature_placeholder(
+        "Approved substitute-product information",
+        "No validated substitute data is available. "
+        "Any candidate requires clinical/pharmacy review and approval. "
+        "This demonstration does not rank or approve alternatives.",
     )
     
     render_feature_placeholder(
         "Availability alerts",
-        "Highlight availability concerns using agreed inventory thresholds. "
-        "Alert rules are still to be defined.",
+        "Alert thresholds remain to be confirmed. "
+        "Displayed availability reflects recorded stock quantities only; "
+        "it does not establish clinical suitability or usable expiry.",
     )
     

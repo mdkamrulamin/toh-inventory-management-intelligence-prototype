@@ -51,6 +51,6 @@ def render_stock_chart(medications: pd.DataFrame, key_prefix: str = "inventory")
         )
         
 def render_feature_placeholder(title: str, description: str) -> None:
-    """Display a planned dashboard section without inventing its logic."""
+    """Display a clearly labelled section awaiting info or implementation"""
     st.subheader(title)
-    st.info(f"Planned feature: {description}")
+    st.info(f"N/A - illustrative placeholder. {description}")
