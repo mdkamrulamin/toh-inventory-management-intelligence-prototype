@@ -17,10 +17,10 @@ The current prototype includes:
 
 | Audience | Implemented shell content |
 | --- | --- |
-| Clinical — Doctor + Nurse | Medication availability table; placeholders for substitute-product information and availability alerts |
+| Clinical — Doctor + Nurse | Searchable medication lookup, availability table, and demo request preview; placeholders for substitute-product information and availability alerts |
 | Procurement + Inventory/Ordering | Stock, consumption, costs, and suppliers; stock charts; placeholders for ABC classification and replenishment |
 | Warehouse | Stock and expiry information; stock charts; placeholders for expiry monitoring, storage locations, and stock movements |
-| Executive | Sample record, zero-stock record, and supplier counts; stock charts; placeholders for performance KPIs, risks, and costs |
+| Executive | Sample record, zero-stock record, and supplier counts; stock charts; placeholders for inventory turnover, performance KPIs, risks, and costs |
 
 Tabs provide demonstration audience navigation. They do not implement authentication or access restrictions.
 
