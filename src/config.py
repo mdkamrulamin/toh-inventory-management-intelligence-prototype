@@ -5,8 +5,10 @@ APP_TITLE = "(TOH) Inventory Management & Intelligence Prototype"
 APP_SUBTITLE = "ELG 5902 | Group 5 | TOH Project"
 
 PROTOTYPE_NOTICE = (
-    "Academic decision-support prototype. "
-    "Demo data and representative metrics will be clearly labelled."
+    "Literature-informed educational prototype. "
+    "All medication inventory values are synthetic and do not represent "
+    "TOH operations. Illustrative features are not validated clinical "
+    "or purchasing decisions."
 )
 
 # Stable role IDS, we will change displayed labels later
@@ -15,6 +17,26 @@ ROLE_LABELS: dict[str, str] = {
     "procurement_inventory": "Procurement + Inventory/Ordering",
     "warehouse": "Warehouse",
     "executive": "Executive",
+}
+
+#Audience context
+ROLE_CONTEXT: dict[str, str] = {
+    "clinical": (
+        "Process context: medication request and availability review. "
+        "Alternative products require clinical/pharmacy approval."
+    ),
+    "procurement_inventory": (
+        "Process context: inventory verification and monitoring; "
+        "replenishment and supplier-order review."
+    ),
+    "warehouse": (
+        "Process context: receiving and storage; distribution; "
+        "physical count and reconciliation."
+    ),
+    "executive": (
+        "Process context: overall inventory performance monitoring "
+        "and policy review."
+    ),
 }
 
 # Resolve data paths from project loc

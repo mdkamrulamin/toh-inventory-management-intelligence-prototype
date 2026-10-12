@@ -7,6 +7,7 @@ from src.config import (
     APP_TITLE,
     PROTOTYPE_NOTICE,
     ROLE_LABELS,
+    ROLE_CONTEXT,
 )
 from src.data.loader import load_medications
 from src.ui.views import ROLE_RENDERERS
@@ -43,6 +44,7 @@ def main() -> None:
     for role_id, role_tab in zip(ROLE_LABELS, role_tabs, strict=True):
         with role_tab:
             st.subheader(ROLE_LABELS[role_id])
+            st.caption(ROLE_CONTEXT[role_id])
             ROLE_RENDERERS[role_id](medications)
         
     
