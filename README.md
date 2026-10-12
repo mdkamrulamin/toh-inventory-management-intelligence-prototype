@@ -166,8 +166,10 @@ Rows: 6
 In the running app, verify that:
 
 - All four audience tabs open successfully.
-- The Clinical table displays six records with four availability columns.
-- The Procurement table displays six records with seven inventory and ordering columns.
+- The Clinical table displays six records initially and one record after selecting a medication, using four availability columns.
+- The clinical demo request preview shows the selected medication, requested quantity, and stock unit without saving a request or changing stock.
+- The Executive view includes a clearly labelled turnover placeholder.
+- The Procurement table displays six records with eight inventory and ordering columns.
 - The Warehouse table displays six records with six stock and expiry columns.
 - Procurement, Warehouse, and Executive stock charts separate tablets, capsules, and vials.
 - Ibuprofen displays zero stock.
