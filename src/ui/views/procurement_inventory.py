@@ -19,12 +19,16 @@ def render_procurement_inventory_view(medications: pd.DataFrame) -> None:
         "current_stock",
         "stock_unit",
         "average_monthly_consumption",
+        "expiry_date",
         "unit_cost",
         "supplier",
         "status",
     ]
     
-    st.caption("Demo consumption is measured in stock units per month. Demo unit costs are in CAD per stock unit.")
+    st.caption(
+        "Demo consumption is measured in stock units per month. Demo unit costs are in CAD per stock unit."
+        "Expiry dates are fictional batch dates."     
+    )
     
     render_medication_table(medications[procurement_columns])
     render_stock_chart(medications, key_prefix="procurement_inventory")
