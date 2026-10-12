@@ -39,6 +39,27 @@ ROLE_CONTEXT: dict[str, str] = {
     ),
 }
 
+# Display labels are separate from the internal data-field names.
+FIELD_LABELS: dict[str, str] = {
+    "medication_id": "Medication ID",
+    "medication_name": "Medication name",
+    "category": "Dosage form",
+    "stock_unit": "Stock unit",
+    "current_stock": "Recorded stock",
+    "unit_cost": "Unit cost (CAD/unit)",
+    "average_monthly_consumption": "Average monthly use",
+    "expiry_date": "Expiry date",
+    "supplier": "Demo supplier",
+    "status": "Recorded availability",
+    "primary_location": "Representative location",
+    "reorder_point": "Reorder point (demo)",
+    "safety_stock_level": "Safety stock (demo)",
+    "lead_time_days": "Lead time (days)",
+    "last_count_date": "Last count date",
+    "counted_stock": "Past counted stock",
+    "ordering_review": "Illustrative ordering review",
+}
+
 # Resolve data paths from project loc
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 SAMPLE_MEDICATIONS_PATH = PROJECT_ROOT / "data" / "sample_medications_extended.csv"

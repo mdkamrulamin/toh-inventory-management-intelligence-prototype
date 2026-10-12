@@ -4,18 +4,23 @@ import pandas as pd
 import streamlit as st
 import plotly.express as px
 
+from src.config import FIELD_LABELS
+
 def render_medication_table(
     medications: pd.DataFrame,
     title: str = "Sample medication inventory",
 ) -> None:
-    """ Display medication information using a reusable table."""
+    """ Display readable medication labels while preserving internal field names."""
     st.subheader(title)
     st.caption(
         "Synthetic demonstration data. Stock quntities use the unit shown in each row."
     )
     
+    #Rename columns in the display copy
+    display_medications = medications.rename(columns=FIELD_LABELS)
+    
     #It provides an interactive table and these options hide the row index and fill the available width.
-    st.dataframe(medications, hide_index=True, width="stretch")
+    st.dataframe(display_medications, hide_index=True, width="stretch")
     
 def render_stock_chart(medications: pd.DataFrame, key_prefix: str = "inventory") -> None:
     """ Display the sample stock quantities, grouped by stock unit. """

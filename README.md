@@ -20,6 +20,7 @@ The application includes:
 - Representative warehouse locations and historical count observations.
 - Executive snapshot summaries and synthetic inventory valuation.
 - Automated checks for loading, replenishment context, and executive summaries.
+- Centrally configured readable table labels, separate from internal field names.
 
 | Audience | Current content |
 | --- | --- |
