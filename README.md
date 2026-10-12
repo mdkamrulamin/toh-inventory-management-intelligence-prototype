@@ -27,7 +27,7 @@ The application includes:
 | Clinical — Doctor + Nurse | Medication lookup, recorded availability, stock units, and demo request preview; placeholders for clinical/pharmacy review, approved substitute information, and alerts |
 | Procurement + Inventory/Ordering | Stock, consumption, expiry, unit costs, suppliers, optional thresholds and lead times, and illustrative ordering-review flags; ABC and replenishment-method placeholders |
 | Warehouse | Recorded stock, representative locations and expiry dates, historical count dates and quantities, and stock charts; receiving, picking, expiry-monitoring, and reconciliation placeholders |
-| Executive | Sample SKU count, zero-stock count and snapshot share, known suppliers, synthetic inventory value, and stock charts; inventory-turnover and further performance/risk placeholders |
+| Executive | Sample SKU count, zero-stock count and snapshot share, known suppliers, and synthetic inventory value; inventory-turnover and further performance/risk placeholders |
 
 The four audiences follow supervisor guidance. Detailed fields, widget choices, illustrative thresholds, and display behavior remain team design proposals informed by Sprint 2 research.
 
@@ -395,7 +395,6 @@ Use this checklist with both the original and extended datasets.
 - Synthetic inventory value is CAD 801.00 with either complete sample dataset.
 - Known demo suppliers total three.
 - Inventory turnover remains a labelled N/A placeholder.
-- Stock charts keep different physical units separate.
 - Snapshot results are not presented as actual TOH performance or historical trends.
 
 ## Scope and limitations

@@ -4,10 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from src.services.summary import summarize_inventory
-from src.ui.components import (
-    render_feature_placeholder,
-    render_stock_chart,
-)
+from src.ui.components import render_feature_placeholder
 
 def render_executive_view(medications: pd.DataFrame) -> None:
     """Show synthetic snapshot summaries and illustrative executive KPI areas."""
@@ -68,7 +65,6 @@ def render_executive_view(medications: pd.DataFrame) -> None:
         "No turnover value is calculated."
     )
     
-    render_stock_chart(medications, key_prefix="executive")
     
     render_feature_placeholder(
         "Inventory performance KPIs",
