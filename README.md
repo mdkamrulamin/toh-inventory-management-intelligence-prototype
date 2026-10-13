@@ -2,7 +2,7 @@
 
 A literature-informed academic medication inventory dashboard developed for the University of Ottawa’s ELG 5902 Industry Project, Group 5.
 
-The prototype demonstrates how medication inventory information can support clinical availability, procurement and ordering review, warehouse operations, and executive oversight.
+The prototype demonstrates how medication inventory information can support clinical availability review, procurement and ordering review, warehouse operations, and executive oversight.
 
 All inventory values are synthetic. The application does not represent actual TOH operations or provide validated clinical or purchasing decisions.
 
@@ -14,40 +14,61 @@ The application includes:
 - Shared audience labels, process-context descriptions, and prototype notices.
 - Original and extended synthetic medication datasets.
 - CSV loading, configurable column mapping, and data validation.
-- Reusable tables, stock charts, and clearly labelled feature placeholders.
-- Clinical medication lookup and a nonpersisted request preview.
+- Centrally configured readable table labels, separate from internal field names.
+- Date-only table formatting using `YYYY-MM-DD`.
+- Compact stock charts separated by physical stock unit.
+- Clinical medication lookup with selected recorded stock, unit, and availability status.
+- Stock-aware, nonpersisted Clinical request previews.
 - Illustrative replenishment-review flags.
 - Representative warehouse locations and historical count observations.
-- Executive snapshot summaries and synthetic inventory valuation.
-- Automated checks for loading, replenishment context, and executive summaries.
-- Centrally configured readable table labels, separate from internal field names.
+- Aggregate-only Executive snapshot summaries and synthetic inventory valuation.
+- Clearly labelled placeholders for features outside the implemented scope.
+- Automated checks for loading, Clinical previews, replenishment context, and Executive summaries.
 
 | Audience | Current content |
 | --- | --- |
-| Clinical — Doctor + Nurse | Medication lookup, recorded availability, stock units, and demo request preview; placeholders for clinical/pharmacy review, approved substitute information, and alerts |
-| Procurement + Inventory/Ordering | Stock, consumption, expiry, unit costs, suppliers, optional thresholds and lead times, and illustrative ordering-review flags; ABC and replenishment-method placeholders |
-| Warehouse | Recorded stock, representative locations and expiry dates, historical count dates and quantities, and stock charts; receiving, picking, expiry-monitoring, and reconciliation placeholders |
-| Executive | Sample SKU count, zero-stock count and snapshot share, known suppliers, and synthetic inventory value; inventory-turnover and further performance/risk placeholders |
+| Clinical — Doctor + Nurse | Medication lookup, selected recorded stock/unit/status, and stock-aware demo request previews for zero, sufficient, or insufficient recorded stock; placeholders for clinical/pharmacy review, approved substitute information, and alerts |
+| Procurement + Inventory/Ordering | Stock, consumption, date-only expiry information, unit costs, suppliers, optional thresholds and lead times, illustrative ordering-review flags, and compact stock charts; ABC and replenishment-method placeholders |
+| Warehouse | Recorded stock, representative locations and expiry dates, historical count dates and quantities, and compact stock charts; receiving, picking, expiry-monitoring, and reconciliation placeholders |
+| Executive | Aggregate sample SKU count, zero-stock count and snapshot share, known suppliers, and synthetic inventory value; inventory-turnover and further performance/risk placeholders |
 
-The four audiences follow supervisor guidance. Detailed fields, widget choices, illustrative thresholds, and display behavior remain team design proposals informed by Sprint 2 research.
+The four audiences follow supervisor guidance. Detailed fields, widget choices, illustrative thresholds, and display behavior remain team design proposals informed by research.
 
 All four tabs are accessible during the demonstration. Tab navigation does not implement authentication or role-based authorization.
 
 Patients may participate in the proposed process map but have no dashboard page. Finance information is included within Procurement and Executive rather than a separate fifth page.
 
+## S3-05 polish and MVP freeze status
+
+SCRUM-43 / S3-05 covers three final UI changes:
+
+1. Make the Clinical medication lookup and request preview stock-aware.
+2. Display Procurement expiry dates without a time component.
+3. Reduce excess vertical whitespace in Procurement and Warehouse stock charts.
+
+The baseline before these changes was commit `84d2a4e`, which keeps the Executive dashboard focused on aggregate summaries.
+
+**S3-05 verification and MVP freeze review are pending.**
+
+The expected automated test suite contains 30 test methods. An expected total is not a recorded passing result.
+
+The prospective freeze baseline must be the new commit containing these changes. Record its hash, actual test results, both-dataset UI outcomes, screenshots, and any remaining blockers.
+
+Do not mark SCRUM-43 frozen until the main project review has accepted the final evidence.
+
 ## Demonstration datasets
 
 ### Original dataset
 
-`data/sample_medications.csv` preserves the original six medication records and ten fields.
+`data/sample_medications.csv` contains the original six medication records and ten fields.
 
-It remains available for backward-compatibility checks.
+It remains available for backward-compatibility and regression checks.
 
 ### Extended dataset
 
 `data/sample_medications_extended.csv` contains the same six records and original ten fields, plus six optional demonstration fields.
 
-The extended dataset is currently the default selected in `src/config.py`.
+The extended dataset is the default selected in `src/config.py`.
 
 ### Field definitions
 
@@ -76,7 +97,7 @@ Each row represents one medication/SKU with one representative location and expi
 
 MED001 and MED004 intentionally have historical counted quantities that differ from current recorded stock. Transactions since those counts are unknown, so these differences do not establish stock inaccuracy, loss, or shrinkage.
 
-## Data validation
+## Data validation and presentation
 
 The loader:
 
@@ -100,7 +121,42 @@ Basic availability uses:
 
 Missing availability labels are derived from these rules. Conflicting supplied labels are rejected.
 
-This availability classification does not establish clinical suitability, usable expiry, or availability elsewhere.
+This availability classification does not establish physical availability, clinical suitability, usable expiry, or availability elsewhere.
+
+The shared table component formats a display copy:
+
+- Internal field names receive readable display labels.
+- Present date fields display as `YYYY-MM-DD`.
+- Missing or unparseable display dates appear as `N/A`.
+- Loader datetime values and source CSV files are not modified.
+
+Invalid dates in source CSVs remain subject to loader validation; presentation formatting does not bypass those checks.
+
+## Clinical request previews
+
+The Clinical view displays the selected medication’s name, ID, recorded stock, stock unit, and basic recorded availability.
+
+A demo request uses a positive whole-number quantity and compares it with the selected record’s `current_stock`.
+
+| Recorded condition | Preview outcome |
+| --- | --- |
+| Recorded stock equals zero | Unable to fulfill from recorded stock; pharmacy review is required |
+| Positive recorded stock is greater than or equal to the requested quantity | Sufficient recorded stock for the requested quantity; proposed next step is pharmacist verification |
+| Positive recorded stock is below the requested quantity | Requested quantity exceeds recorded stock; review is needed before fulfillment |
+
+Every preview identifies the selected medication, medication ID, requested quantity, stock unit, and recorded-stock comparison.
+
+The zero-stock message describes possible steps in the proposed process: internal redistribution, clinically authorized alternatives, or procurement escalation. It does not recommend a particular substitute or initiate any action.
+
+The sufficient-stock message explicitly distinguishes the synthetic record from a physical stock confirmation.
+
+Changing the selected medication or committing a quantity edit clears the previous preview. Clicking **Preview demo request** evaluates the current inputs.
+
+Invalid or missing request quantities are rejected with a validation message.
+
+Nothing is saved, sent, deducted, or approved. Historical `counted_stock` observations are never used to replace `current_stock`.
+
+Clinical/pharmacy review, approved substitute information, and availability alerts remain clearly labelled placeholders.
 
 ## Illustrative replenishment context
 
@@ -119,9 +175,25 @@ Thresholds are synthetic, client-unvalidated examples. Safety stock and lead tim
 
 The application does not create purchase orders, select a universal replenishment method, or automatically order medication.
 
+## Stock charts
+
+Procurement and Warehouse use the same reusable stock-chart component.
+
+Charts:
+
+- Keep tablet, capsule, and vial quantities separate.
+- Adjust height according to the number of medication rows in each unit group.
+- Preserve medication labels, axis labels, values, and hover information.
+- Retain zero-stock medication categories, including MED003.
+- Leave space for value labels and readable one-item groups.
+
+Unlike physical stock units are never summed into one stock total.
+
+The Executive view does not display item-level stock charts.
+
 ## Executive snapshot summaries
 
-The current datasets produce:
+Both complete sample datasets produce:
 
 | Summary | Expected value |
 | --- | ---: |
@@ -215,28 +287,58 @@ SAMPLE_MEDICATIONS_PATH = PROJECT_ROOT / "data" / "sample_medications.csv"
 
 After changing this configuration, save the file and restart Streamlit so imported settings and loader defaults are refreshed.
 
-The automated checks use explicit dataset paths and can check both files regardless of the selected application default.
+Restore the extended dataset as the default after completing cross-dataset verification.
+
+Loader and Executive summary regression tests use explicit dataset paths to check both files regardless of the selected application default.
+
+### Verify dataset shapes
+
+From the project root:
+
+```bash
+python -c "from src.data.loader import load_medications; print(load_medications('data/sample_medications.csv').shape)"
+```
+
+Expected:
+
+```text
+(6, 10)
+```
+
+For the extended dataset:
+
+```bash
+python -c "from src.data.loader import load_medications; print(load_medications('data/sample_medications_extended.csv').shape)"
+```
+
+Expected:
+
+```text
+(6, 16)
+```
 
 ## Project structure
 
 | Location | Purpose |
 | --- | --- |
 | `app.py` | Streamlit entry point, shared loading, tab routing, and audience context |
-| `src/config.py` | Application notices, role IDs/labels, process context, and default data path |
+| `src/config.py` | Application notices, role IDs/labels, process context, table labels, and default data path |
 | `src/data/schema.py` | Required fields, optional extension fields, numeric/date fields, and column mapping |
 | `src/data/loader.py` | CSV loading, parsing, validation, and basic availability checks |
+| `src/services/clinical.py` | Validated, nonmutating Clinical request-stock comparison |
 | `src/services/replenishment.py` | Illustrative ordering-review context |
 | `src/services/summary.py` | Executive snapshot counts, share, and synthetic valuation |
-| `src/ui/components.py` | Reusable tables, stock charts, and feature placeholders |
+| `src/ui/components.py` | Reusable date-formatted tables, compact stock charts, and feature placeholders |
 | `src/ui/navigation.py` | Four-audience tab creation |
 | `src/ui/views/__init__.py` | Mapping of role IDs to view functions |
-| `src/ui/views/clinical.py` | Clinical lookup, availability, and request-preview view |
+| `src/ui/views/clinical.py` | Clinical lookup, selected availability, and stock-aware request-preview view |
 | `src/ui/views/procurement_inventory.py` | Procurement information and replenishment-context view |
 | `src/ui/views/warehouse.py` | Representative locations, expiry, and historical-count view |
-| `src/ui/views/executive.py` | Executive snapshot and KPI-placeholder view |
+| `src/ui/views/executive.py` | Aggregate-only Executive snapshot and KPI-placeholder view |
 | `data/sample_medications.csv` | Original six-record, ten-field synthetic dataset |
 | `data/sample_medications_extended.csv` | Extended six-record, sixteen-field synthetic dataset |
 | `tests/test_loader.py` | Loader and dataset regression checks |
+| `tests/test_clinical.py` | Clinical preview outcomes, validation, identity/units, and nonmutation checks |
 | `tests/test_replenishment.py` | Ordering-review boundary and missing-input checks |
 | `tests/test_summary.py` | Executive calculations and missing-data checks |
 | `requirements.txt` | Python dependencies |
@@ -245,7 +347,7 @@ The automated checks use explicit dataset paths and can check both files regardl
 
 Python package initialization files are also included under `src/`.
 
-An unused local `pages/` folder may remain from the initial setup. Current role views are organized under `src/ui/views/`.
+Current role views are organized under `src/ui/views/`.
 
 ## Run automated tests
 
@@ -261,9 +363,19 @@ source .venv/bin/activate
 python -m unittest discover -s tests -p "test_*.py" -v
 ```
 
-Current expected result: **22 test methods**, followed by `OK`.
+Expected result: **30 test methods**, followed by `OK`.
 
-Some methods include several input subcases, so more than 22 individual scenarios are checked.
+Some methods include several input subcases, so more than 30 individual scenarios are checked.
+
+| Test file | Expected test methods |
+| --- | ---: |
+| `test_loader.py` | 11 |
+| `test_clinical.py` | 8 |
+| `test_replenishment.py` | 6 |
+| `test_summary.py` | 5 |
+| Total | 30 |
+
+Record the actual passing total during S3-05 verification.
 
 ### Run loader tests only
 
@@ -286,6 +398,27 @@ These check:
 - Duplicate identifiers.
 - Missing required columns.
 
+### Run Clinical request-preview tests only
+
+```bash
+python -m unittest discover -s tests -p "test_clinical.py" -v
+```
+
+Expected: **8 tests**.
+
+These check:
+
+- Zero recorded stock requires review.
+- Sufficient recorded stock.
+- Requested quantity equal to recorded stock.
+- Requested quantity above recorded stock.
+- Selected medication identity and stock unit.
+- Invalid or missing request quantities.
+- Historical counts do not replace recorded stock.
+- Source inventory data is not modified.
+
+These comparisons are educational UI decision support using synthetic recorded stock. They do not confirm physical availability, assess clinical suitability, approve treatment, or submit requests.
+
 ### Run replenishment tests only
 
 ```bash
@@ -303,7 +436,7 @@ These check:
 - Blank reorder thresholds remain unavailable.
 - Source inventory data is not modified.
 
-### Run executive summary tests only
+### Run Executive summary tests only
 
 ```bash
 python -m unittest discover -s tests -p "test_summary.py" -v
@@ -323,16 +456,22 @@ These check:
 
 Use `-k` with a test method name. Method names appear in the verbose output.
 
-For example, to check the reorder boundary:
-
-```bash
-python -m unittest discover -s tests -p "test_replenishment.py" -k "test_below_and_equal_threshold_require_review" -v
-```
-
-To check invalid numeric inputs:
+To check invalid loader numeric inputs:
 
 ```bash
 python -m unittest discover -s tests -p "test_loader.py" -k "test_invalid_numbers_are_rejected" -v
+```
+
+To check a Clinical request exceeding recorded stock:
+
+```bash
+python -m unittest discover -s tests -p "test_clinical.py" -k "test_quantity_above_stock_requires_review" -v
+```
+
+To check the reorder boundary:
+
+```bash
+python -m unittest discover -s tests -p "test_replenishment.py" -k "test_below_and_equal_threshold_require_review" -v
 ```
 
 To check missing-cost handling:
@@ -343,17 +482,18 @@ python -m unittest discover -s tests -p "test_summary.py" -k "test_missing_cost_
 
 Subcases within the selected method run together.
 
-The current automated tests have passed locally. They check data and service behavior; they do not replace manual Streamlit interface checks.
+Automated tests check data and service behavior. They do not replace manual Streamlit checks for stale previews, date display, chart readability, or tab rendering.
 
 ## Manual dashboard verification
 
-Use this checklist with both the original and extended datasets.
+Complete this checklist with both the original and extended datasets.
 
 ### Common checks
 
 - Exactly four audience tabs are available.
 - Each tab displays its audience heading and process context.
 - The shared notice identifies the application as an educational prototype using synthetic data.
+- The demo notice states that tab navigation has no sign-in or access control.
 - Planned sections are clearly labelled as illustrative placeholders.
 - No patient-facing route exists.
 - Tabs open without errors when optional extension columns are absent.
@@ -361,20 +501,30 @@ Use this checklist with both the original and extended datasets.
 ### Clinical
 
 - The initial availability table contains six medications.
-- Selecting MED003 — Ibuprofen 200 mg shows zero stock.
-- Selecting a medication displays its name, stock quantity, and stock unit.
-- A request preview displays the selected medication and requested quantity.
-- Previewing a request does not save or send it, change stock, or record approval.
+- Selecting a medication displays its name, ID, recorded stock, stock unit, and recorded availability.
+- MED003 — Ibuprofen 200 mg, quantity 3: zero-stock pharmacy-review outcome.
+- MED001 — Paracetamol 500 mg, quantity 3: sufficient-recorded-stock outcome with proposed pharmacist verification.
+- MED001, quantity 1500: insufficient-recorded-stock outcome.
+- Selecting capsule and vial medications displays the correct units in the preview.
+- Every result includes the selected name, ID, requested quantity, unit, and recorded-stock comparison.
+- Changing medication after a preview clears the old result.
+- Committing a quantity edit after a preview clears the old result.
+- Clicking Preview again evaluates the current medication and quantity.
+- Repeated previews and refreshes do not change recorded stock or save requests.
+- Review-status, approved-substitute, and availability-alert placeholders remain present.
 - Costs and supplier commercial information are absent.
 - No unvalidated substitute is recommended or approved.
 
 ### Procurement + Inventory/Ordering
 
 - Stock, consumption, expiry, costs, and suppliers are visible.
-- Extended inputs display the illustrative thresholds and lead times.
+- Expiry dates display as `YYYY-MM-DD`, without `00:00:00`.
+- Missing display dates appear as `N/A`, not `NaT`.
+- Extended inputs display illustrative thresholds and lead times.
 - MED003 has the distinct zero-stock review flag.
 - With the extended dataset, MED006 has stock 80 and reorder point 90, so it is flagged for review.
-- Missing optional thresholds display N/A.
+- With the original dataset, MED006 has positive stock but no reorder point, so its threshold context is unavailable.
+- Missing optional thresholds and lead times display `N/A`.
 - Dosage-form category is not presented as ABC class.
 - No purchase order or order quantity is created.
 
@@ -382,20 +532,116 @@ Use this checklist with both the original and extended datasets.
 
 - Stock quantities retain their physical units.
 - Extended inputs display representative storage locations.
-- Expiry and count dates are readable as `YYYY-MM-DD`.
+- Expiry and count dates display as `YYYY-MM-DD`.
 - MED001 retains current stock 1,200 alongside past counted stock 1,195.
 - MED004 retains current stock 900 alongside past counted stock 895.
 - Historical counts do not overwrite current stock.
-- Missing location/count information displays N/A.
+- Missing location/count information displays `N/A`.
+- Expiry monitoring, receiving/picking, and stock-movement/reconciliation placeholders remain present.
 - No batch-level FEFO, stock-accuracy, loss, or shrinkage conclusion is claimed.
+
+### Procurement and Warehouse charts
+
+- Tablet, capsule, and vial charts remain separate.
+- Chart heights are compact at normal browser width.
+- Medication labels, axis labels, values, and hover information remain readable.
+- MED003/Ibuprofen remains visible as a zero-stock category.
+- The one-item vial chart remains comfortably readable.
+- Labels do not overlap or clip.
+- No medication rows or synthetic quantities are changed.
 
 ### Executive
 
-- Cards show six SKUs, one zero-stock SKU, and a 16.7% zero-stock share.
+- Cards show six SKUs, one recorded zero-stock SKU, and a 16.7% zero-stock snapshot share.
 - Synthetic inventory value is CAD 801.00 with either complete sample dataset.
 - Known demo suppliers total three.
-- Inventory turnover remains a labelled N/A placeholder.
+- Inventory turnover remains a labelled `N/A` placeholder.
+- Only aggregate summaries and broad placeholders are shown; no item-level stock chart is present.
 - Snapshot results are not presented as actual TOH performance or historical trends.
+
+After checking the original dataset, restore the extended dataset as the default and confirm it loads correctly.
+
+## S3-05 release evidence
+
+Capture the following screenshots:
+
+1. Clinical MED003 with requested quantity 3 and its preview.
+2. Clinical MED001 with requested quantity 3 and its preview.
+3. Clinical MED001 with requested quantity 1500 and its preview.
+4. Procurement date-only table and compact stock charts.
+5. Warehouse compact stock charts.
+6. Executive aggregate overview.
+
+Use additional screenshots if needed to show all chart groups clearly.
+
+After verification, record:
+
+- Actual automated test command, passing total, and result.
+- Manual outcomes for both datasets.
+- Screenshot references.
+- Exact changed-file list.
+- Final commit hash and branch.
+- Confirmation that the commit is pushed.
+- Confirmation that the working tree is clean.
+- Any unresolved defect or blocker.
+
+Before committing, review:
+
+```bash
+git diff --check
+git diff
+git status --short
+```
+
+After committing and pushing, collect:
+
+```bash
+git branch --show-current
+git status --short
+git log -1 --oneline
+git show --format= --name-only HEAD
+```
+
+An empty `git status --short` output indicates a clean working tree.
+
+The intended S3-05 changed files are:
+
+- `README.md`
+- `src/services/clinical.py`
+- `src/ui/components.py`
+- `src/ui/views/clinical.py`
+- `tests/test_clinical.py`
+
+The temporary dataset switch should leave no change in `src/config.py` after the extended default is restored.
+
+## Research and implementation traceability
+
+The prototype distinguishes:
+
+- Supervisor guidance.
+- Paper evidence.
+- Project design inference.
+- Synthetic input assumptions.
+- Derived demonstration results.
+- Actual tested implementation.
+- Deferred features and placeholders.
+
+The S3-05 handover identifies Maria P020 as the basis for distinguishing recorded stock from verified physical availability. Maria’s proposed S1–S5 medication process and Sai P001/substitute framework inform the review and clinical-authorization boundaries.
+
+The three-way request-stock comparison is a project UI interpretation using synthetic data, not a clinical decision rule validated by TOH.
+
+Date formatting and chart sizing are presentation design choices. They should not be attributed to papers as prescribed implementation rules.
+
+| S3-05 change | Implementation paths | Task 24 linkage |
+| --- | --- | --- |
+| Stock-aware Clinical preview | `src/services/clinical.py`, `src/ui/views/clinical.py`, `tests/test_clinical.py` | UI24-04, UI24-05, UI24-06 |
+| Date-only table display | `src/ui/components.py` | UI24-07, UI24-12 |
+| Compact unit-separated charts | `src/ui/components.py` | UI24-07, UI24-12, UI24-19 |
+| Verification and handover | Tests, README, screenshots, and final commit | UI24-20 |
+
+Update the project traceability workbook with the verified code paths, source IDs, actual test/manual results, and final S3-05 commit.
+
+Verification of a placeholder means its label and scope boundary were checked. It does not mean the underlying analytics or workflow has been implemented.
 
 ## Scope and limitations
 
@@ -407,25 +653,28 @@ Current limitations include:
 - One record per medication/SKU.
 - One representative location and expiry attribute per record.
 - No transaction history, multiple-lot model, or multi-location inventory.
-- Nonpersisted clinical request previews.
+- Nonpersisted Clinical request previews.
+- Recorded stock comparisons without physical-stock verification.
 - No validated substitute relationships or clinical-criticality labels.
-- Placeholder ABC classification, method selection, and additional executive KPIs.
+- Placeholder ABC classification, replenishment-method selection, and additional Executive KPIs.
 - No actual turnover, longitudinal service-level, or stock-accuracy calculation.
 - Demonstration tab navigation rather than authenticated role access.
 
-Production authentication, live TOH/ERP integration, automatic dispensing or ordering, enterprise databases, forecasting engines, and AI assistants are outside the current implementation.
+No request is submitted or approved. No stock is deducted. No purchase order is created. No drug substitute is automatically recommended or authorized.
+
+Production authentication, live TOH/ERP integration, automatic dispensing or ordering, enterprise databases, forecasting engines, and advanced optimization are outside the current implementation.
+
+Emergency scenarios are outside the proposed prototype process.
+
+This is an academic decision-support prototype. Its data, comparisons, and representative metrics must not be used for clinical or purchasing decisions.
 
 ## Next development stage
 
-Remaining refinement and integration work includes:
+The immediate priority is to complete S3-05 verification, review the evidence, and agree on the MVP freeze baseline.
 
-- Polish shared table display labels.
-- Complete the final cross-dataset interface checklist for the refined views.
-- Record verified requirement-to-code references and commit hashes in the project traceability workbook.
-- Complete Task 25’s integration review and coherent MVP decision flow.
-- Incorporate further approved field definitions, KPI definitions, and research refinements.
+Further integration or implementation changes should follow the approved Sprint 3 plan and confirmed research requirements.
 
-Future request/approval records, purchase orders, substitute relationships, stock movements, and multiple-lot/location data should use suitable supporting tables if confirmed in scope.
+Future request/approval records, purchase orders, substitute relationships, stock movements, and multiple-lot/location data would require suitable supporting structures if confirmed in scope.
 
 ## Team and contributions
 
@@ -439,4 +688,4 @@ Developed by ELG 5902 Group 5:
 
 The prototype incorporates the team’s literature findings, process analysis, inventory frameworks, and dashboard requirements alongside software implementation.
 
-The implementation distinguishes supervisor guidance, literature-informed concepts, team design assumptions, synthetic inputs, derived demonstration values, and features deferred to later work.
+Detailed implementation choices remain team design proposals and assumptions where TOH-specific requirements or operational information have not been confirmed.
