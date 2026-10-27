@@ -6,6 +6,7 @@ import plotly.express as px
 
 from src.config import FIELD_LABELS
 from src.data.schema import DATE_COLUMNS
+from src.ui.styles import style_stock_figure
 
 def render_medication_table(
     medications: pd.DataFrame,
@@ -14,7 +15,7 @@ def render_medication_table(
     """ Display readable medication labels while preserving internal field names."""
     st.subheader(title)
     st.caption(
-        "Synthetic demonstration data. Stock quntities use the unit shown in each row."
+        "Synthetic demonstration data. Stock quantities use the unit shown in each row."
     )
     
     display_medications = medications.copy()
@@ -36,7 +37,7 @@ def render_medication_table(
     display_medications = display_medications.rename(columns=FIELD_LABELS)
     
     #It provides an interactive table and these options hide the row index and fill the available width.
-    st.dataframe(display_medications, hide_index=True, width="stretch")
+    st.dataframe(display_medications, hide_index=True, width="stretch", row_height=40)
     
 def render_stock_chart(medications: pd.DataFrame, key_prefix: str = "inventory") -> None:
     """ Display the sample stock quantities, grouped by stock unit. """
@@ -52,7 +53,7 @@ def render_stock_chart(medications: pd.DataFrame, key_prefix: str = "inventory")
         row_count = len(chart_data)
         
         # Reserve room for titles/axes, then add space per medication.
-        chart_height = max(170, 100 + 42 * row_count)
+        chart_height = max(190, 110 + 46 * row_count)
         
         figure = px.bar(
             chart_data,
@@ -91,6 +92,8 @@ def render_stock_chart(medications: pd.DataFrame, key_prefix: str = "inventory")
             categoryarray=chart_data["medication_name"].to_list(),
             automargin=True,
         )
+        style_stock_figure(figure)
+        
         st.plotly_chart(
             figure, 
             width="stretch",

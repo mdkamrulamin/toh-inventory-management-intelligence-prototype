@@ -1,0 +1,147 @@
+/*
+ * Shared dashboard presentation.
+ * Container classes come from explicit Streamlit keys.
+ * Tab selectors use semantic accessibility roles and selection state.
+ */
+
+/* Keep headings readable when the browser width changes. */
+.st-key-dashboard h1,
+.st-key-dashboard h2,
+.st-key-dashboard h3 {
+    overflow-wrap: anywhere;
+    line-height: 1.25;
+}
+
+/* Maintain comfortable body-text spacing. */
+.st-key-dashboard p {
+    line-height: 1.5;
+}
+
+/* All role banners share the same spacing and border treatment. */
+.st-key-role_header_clinical,
+.st-key-role_header_procurement_inventory,
+.st-key-role_header_warehouse,
+.st-key-role_header_executive {
+    padding: 1rem 1.25rem;
+    margin-top: 0.75rem;
+    margin-bottom: 1rem;
+    border: 1px solid #CBD5E1;
+    border-radius: 0.75rem;
+    color: #1F2937;
+}
+
+/* Audience accents identify roles, not stock classifications. */
+.st-key-role_header_clinical {
+    background-color: #CFE8FF;
+}
+
+.st-key-role_header_procurement_inventory {
+    background-color: #FFD6A5;
+}
+
+.st-key-role_header_warehouse {
+    background-color: #DDE2E8;
+}
+
+.st-key-role_header_executive {
+    background-color: #CDECCF;
+}
+
+/* Improve the native tab controls without changing their behavior. */
+.st-key-dashboard [role="tablist"] {
+    gap: 0.5rem;
+    height: auto;
+}
+
+.st-key-dashboard [role="tab"] {
+    min-height: 3rem;
+    height: auto;
+    padding: 0.65rem 0.85rem;
+    border: 1px solid #CBD5E1;
+    border-radius: 0.6rem 0.6rem 0 0;
+    background-color: #F3F5F7;
+    color: #1F2937;
+    font-size: 19px;
+    font-weight: 600;
+}
+
+.st-key-dashboard [role="tab"] p {
+    margin: 0;
+    color: inherit;
+    font-size: inherit;
+}
+
+/* Selection uses a border and underline as well as a background change. */
+.st-key-dashboard [role="tab"][aria-selected="true"] {
+    background-color: #DBEAFE;
+    border-color: #1D4ED8;
+    color: #1E3A8A;
+    text-decoration: underline;
+    text-underline-offset: 0.3rem;
+}
+
+/* Keep keyboard navigation visible. */
+.st-key-dashboard [role="tab"]:focus-visible {
+    outline: 3px solid #1D4ED8;
+    outline-offset: 2px;
+}
+
+/* Illustrated navigation icons retain a consistent footprint. */
+.st-key-dashboard [role="tab"] img {
+    width: 28px;
+    height: 28px;
+    max-height: 28px;
+    object-fit: contain;
+    vertical-align: middle;
+    margin-right: 0.35rem;
+}
+
+/* Larger illustrations in role banners. */
+.st-key-role_header_clinical h2 img,
+.st-key-role_header_procurement_inventory h2 img,
+.st-key-role_header_warehouse h2 img,
+.st-key-role_header_executive h2 img {
+    width: 44px;
+    height: 44px;
+    max-height: 44px;
+    object-fit: contain;
+    vertical-align: middle;
+    margin-right: 0.5rem;
+}
+
+/* Institutional header: logos flank the centred project identity. */
+.st-key-brand_header {
+    padding-bottom: 0.75rem;
+}
+
+.st-key-brand_header h1 {
+    text-align: center;
+    font-size: clamp(24px, 2.15vw, 32px);
+    line-height: 1.25;
+    overflow-wrap: normal;
+}
+
+.st-key-brand_header p {
+    text-align: center;
+}
+
+/* Preserve logo proportions within a consistent visual height. */
+.st-key-brand_header img {
+    max-height: 90px;
+    object-fit: contain;
+}
+
+/* Preserve usable controls on narrower screens. */
+@media (max-width: 900px) {
+    .st-key-dashboard [role="tab"] {
+        font-size: 17px;
+        padding: 0.6rem;
+    }
+
+    .st-key-role_header_clinical,
+    .st-key-role_header_procurement_inventory,
+    .st-key-role_header_warehouse,
+    .st-key-role_header_executive {
+        padding: 0.85rem;
+    }
+}

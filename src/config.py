@@ -13,10 +13,19 @@ PROTOTYPE_NOTICE = (
 
 # Stable role IDS, we will change displayed labels later
 ROLE_LABELS: dict[str, str] = {
-    "clinical": "Clinical - Doctor + Nurse",
-    "procurement_inventory": "Procurement + Inventory/Ordering",
+    "clinical": "Clinical",
+    "procurement_inventory": "Procurement",
     "warehouse": "Warehouse",
     "executive": "Executive",
+}
+
+# Use one consistent icon family alongside persistent audience text labels.
+# Material Symbols are supported directly by Streamlit.
+ROLE_ICON_FILES: dict[str, str] = {
+    "clinical": "doctor.png",
+    "procurement_inventory": "procurement.png",
+    "warehouse": "warehouse.png",
+    "executive": "executive.png",
 }
 
 #Audience context
@@ -63,3 +72,4 @@ FIELD_LABELS: dict[str, str] = {
 # Resolve data paths from project loc
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 SAMPLE_MEDICATIONS_PATH = PROJECT_ROOT / "data" / "sample_medications_extended.csv"
+

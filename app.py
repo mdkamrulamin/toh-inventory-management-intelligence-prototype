@@ -3,52 +3,56 @@
 import streamlit as st
 
 from src.config import (
-    APP_SUBTITLE,
     APP_TITLE,
     PROTOTYPE_NOTICE,
     ROLE_LABELS,
-    ROLE_CONTEXT,
 )
 from src.data.loader import load_medications
-from src.ui.views import ROLE_RENDERERS
 from src.ui.navigation import render_role_tabs
+from src.ui.styles import (
+    apply_dashboard_styles,
+    render_brand_header,
+    render_role_heading,
+)
+from src.ui.views import ROLE_RENDERERS
 
 def main() -> None:
-    """ COnfigure the application and render the initial landing page. """
+    """Configure shared presentation, load data, and render four roles."""
+    
     st.set_page_config(
         page_title=APP_TITLE,
         page_icon="💊",
         layout="wide",
     )
     
-    st.title(APP_TITLE)
-    st.caption(APP_SUBTITLE)
-    st.info(PROTOTYPE_NOTICE)
+    apply_dashboard_styles()
     
-    st.write(
-        "A medication-focused dashboard for clinical availability, "
-        "inventory operations, and executive oversight."
-    )
+    # Scope custom presentation to this explicitly keyed container.
+    with st.container(key="dashboard"):
+        render_brand_header()
         
-    try:
-        medications = load_medications()
-    except (OSError, ValueError) as error:
-        st.error(f"Unable to load medication data: {error}")
-        return
-    
-    st.caption("Demo audience views - no sign-in or access control.")
-    role_tabs = render_role_tabs()
-    
-    # Match each stable role ID to its tab container.
-    
-    for role_id, role_tab in zip(ROLE_LABELS, role_tabs, strict=True):
-        with role_tab:
-            st.subheader(ROLE_LABELS[role_id])
-            st.caption(ROLE_CONTEXT[role_id])
-            ROLE_RENDERERS[role_id](medications)
+        # Keep one clear global notice
+        st.info(PROTOTYPE_NOTICE)
         
+        st.write(
+            "A medication-focused dashboard for clinical availability, "
+            "inventory operations, and executive oversight."
+        )
+        st.caption("Demo audience views - no sign-in or access control.")
+        try:
+            medications = load_medications()
+        except (OSError, ValueError) as error:
+            st.error(f"Unable to load medication data: {error}")
+            return
     
+        role_tabs = render_role_tabs()
         
+        for role_id, role_tab in zip(ROLE_LABELS, role_tabs, strict=True):
+            with role_tab:
+                render_role_heading(role_id)
+                ROLE_RENDERERS[role_id](medications)
+            
+  
 if __name__ == "__main__":
     main()
     
