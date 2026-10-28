@@ -133,29 +133,41 @@
 
 /*
  * Persistent native table toolbar.
- * These selectors depend on Streamlit's internal markup.
- * Recheck after changing the Streamlit version.
+ * Keep the toolbar in normal layout flow above the grid.
+ * Recheck internal selectors after upgrading Streamlit.
  */
 
-/* Reserve space above each table for its toolbar. */
+/* No artificial space is needed above the table. */
 .st-key-dashboard [class*="st-key-table_"] {
-    margin-top: 4.5rem;
+    margin-top: 0;
 }
 
-/* Attach the toolbar directly above the table. */
+/* Stack the native toolbar and grid vertically. */
+.st-key-dashboard [class*="st-key-table_"]
+[data-testid="stDataFrame"] {
+    display: block !important;
+    width: 100%;
+    max-width: 100%;
+    height: auto !important;
+}
+
+/* Keep the toolbar visible and let it occupy its own space. */
 .st-key-dashboard [class*="st-key-table_"]
 [data-testid="stElementToolbar"] {
+    position: relative !important;
     opacity: 1 !important;
     visibility: visible !important;
     top: auto !important;
-    bottom: 100%;
-    right: 0 !important;
+    bottom: auto !important;
+    right: auto !important;
     width: 100%;
+    box-sizing: border-box;
+    margin: 0;
     padding: 0;
     transition: none !important;
 }
 
-/* Toolbar forms the upper section of the shared panel. */
+/* Upper section of the merged panel. */
 .st-key-dashboard [class*="st-key-table_"]
 [data-testid="stElementToolbarButtonContainer"] {
     display: flex;
@@ -172,20 +184,19 @@
     box-shadow: none;
 }
 
-/* Table forms the lower section of the shared panel. */
+/* Lower section of the merged panel. */
 .st-key-dashboard [class*="st-key-table_"]
 [data-testid="stDataFrameResizable"] {
     border-color: #CBD5E1 !important;
     border-radius: 0 0 0.6rem 0.6rem !important;
 }
 
-/* Remove rounded upper corners from the inner grid. */
 .st-key-dashboard [class*="st-key-table_"]
 .stDataFrameGlideDataEditor {
     border-radius: 0 0 0.6rem 0.6rem !important;
 }
 
-/* Larger controls with readable contrast and click targets. */
+/* Readable controls with comfortable click targets. */
 .st-key-dashboard [class*="st-key-table_"]
 [data-testid="stElementToolbar"] button {
     display: inline-flex;
@@ -203,7 +214,7 @@
     white-space: nowrap;
 }
 
-/* Display each native button's existing accessible label. */
+/* Show the existing accessible button labels. */
 .st-key-dashboard [class*="st-key-table_"]
 [data-testid="stElementToolbar"] button[aria-label]::after {
     content: attr(aria-label);
@@ -221,12 +232,8 @@
     outline-offset: 2px;
 }
 
-/* Leave room for controls to wrap on narrower screens. */
+/* Wrapped controls automatically increase the toolbar's height. */
 @media (max-width: 700px) {
-    .st-key-dashboard [class*="st-key-table_"] {
-        margin-top: 10rem;
-    }
-
     .st-key-dashboard [class*="st-key-table_"]
     [data-testid="stElementToolbarButtonContainer"] {
         justify-content: flex-start;
