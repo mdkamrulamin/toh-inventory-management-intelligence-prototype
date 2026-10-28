@@ -16,10 +16,12 @@ from src.ui.styles import style_stock_figure
 def render_medication_table(
     medications: pd.DataFrame,
     title: str = "Sample medication inventory",
+    *,
+    export_key: str,
 ) -> None:
     """Format a display copy and color any inventory-review column."""
     
-    """ Display readable medication labels while preserving internal field names."""
+    """Display a formatted table with an explicit CSV download control."""
     st.subheader(title)
     st.caption(
         "Synthetic demonstration data. Stock quantities use the unit shown in each row."
@@ -58,8 +60,20 @@ def render_medication_table(
             subset=[review_column],
         )
     
+    st.caption(
+        "Table tools: show or hide columns, download CSV, "
+        "search, or open fullscreen."
+    )
     #It provides an interactive table and these options hide the row index and fill the available width.
-    st.dataframe(table_content, hide_index=True, width="stretch", row_height=40)
+    # The container provides the CSS class used by our toolbar styling.
+    # Keep the key here rather than on the read-only dataframe.
+    with st.container(key=f"table_{export_key}"):
+        st.dataframe(
+            table_content,
+            hide_index=True,
+            width="stretch",
+            row_height=40,
+        )
     
 def render_stock_chart(medications: pd.DataFrame, key_prefix: str = "inventory") -> None:
     """Keep units separate and color quantities using shared review results."""

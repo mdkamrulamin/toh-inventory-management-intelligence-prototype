@@ -131,6 +131,108 @@
     object-fit: contain;
 }
 
+/*
+ * Persistent native table toolbar.
+ * These selectors depend on Streamlit's internal markup.
+ * Recheck after changing the Streamlit version.
+ */
+
+/* Reserve space above each table for its toolbar. */
+.st-key-dashboard [class*="st-key-table_"] {
+    margin-top: 4.5rem;
+}
+
+/* Attach the toolbar directly above the table. */
+.st-key-dashboard [class*="st-key-table_"]
+[data-testid="stElementToolbar"] {
+    opacity: 1 !important;
+    visibility: visible !important;
+    top: auto !important;
+    bottom: 100%;
+    right: 0 !important;
+    width: 100%;
+    padding: 0;
+    transition: none !important;
+}
+
+/* Toolbar forms the upper section of the shared panel. */
+.st-key-dashboard [class*="st-key-table_"]
+[data-testid="stElementToolbarButtonContainer"] {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.4rem;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.5rem;
+    background-color: #F3F5F7;
+    border: 1px solid #CBD5E1;
+    border-bottom: 0;
+    border-radius: 0.6rem 0.6rem 0 0;
+    box-shadow: none;
+}
+
+/* Table forms the lower section of the shared panel. */
+.st-key-dashboard [class*="st-key-table_"]
+[data-testid="stDataFrameResizable"] {
+    border-color: #CBD5E1 !important;
+    border-radius: 0 0 0.6rem 0.6rem !important;
+}
+
+/* Remove rounded upper corners from the inner grid. */
+.st-key-dashboard [class*="st-key-table_"]
+.stDataFrameGlideDataEditor {
+    border-radius: 0 0 0.6rem 0.6rem !important;
+}
+
+/* Larger controls with readable contrast and click targets. */
+.st-key-dashboard [class*="st-key-table_"]
+[data-testid="stElementToolbar"] button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    min-height: 44px;
+    padding: 0.5rem 0.75rem;
+    color: #1F2937;
+    background-color: #FFFFFF;
+    border: 1px solid #CBD5E1;
+    border-radius: 0.4rem;
+    font-size: 15px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* Display each native button's existing accessible label. */
+.st-key-dashboard [class*="st-key-table_"]
+[data-testid="stElementToolbar"] button[aria-label]::after {
+    content: attr(aria-label);
+}
+
+.st-key-dashboard [class*="st-key-table_"]
+[data-testid="stElementToolbar"] button:hover {
+    background-color: #DBEAFE;
+    border-color: #1D4ED8;
+}
+
+.st-key-dashboard [class*="st-key-table_"]
+[data-testid="stElementToolbar"] button:focus-visible {
+    outline: 3px solid #1D4ED8;
+    outline-offset: 2px;
+}
+
+/* Leave room for controls to wrap on narrower screens. */
+@media (max-width: 700px) {
+    .st-key-dashboard [class*="st-key-table_"] {
+        margin-top: 10rem;
+    }
+
+    .st-key-dashboard [class*="st-key-table_"]
+    [data-testid="stElementToolbarButtonContainer"] {
+        justify-content: flex-start;
+    }
+}
+
 /* Preserve usable controls on narrower screens. */
 @media (max-width: 900px) {
     .st-key-dashboard [role="tab"] {

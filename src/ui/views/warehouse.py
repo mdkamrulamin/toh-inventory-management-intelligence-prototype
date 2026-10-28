@@ -55,7 +55,11 @@ def render_warehouse_view(medications: pd.DataFrame) -> None:
             "multiple lots and batch-level FEFO are not represented."      
         )
         
-        render_medication_table(warehouse_data, title="Representative warehouse stock",)
+        render_medication_table(
+            warehouse_data, 
+            title="Representative warehouse stock",
+            export_key="warehouse_stock",
+        )
         
         render_stock_review_legend()
         count_columns = [
@@ -86,7 +90,11 @@ def render_warehouse_view(medications: pd.DataFrame) -> None:
             "count are not modeled, so this comparison cannot establish current stock accuracy, loss, or shrinkage."
         )
         
-        render_medication_table(count_data, title="Historical count observations",)
+        render_medication_table(
+            count_data, 
+            title="Historical count observations",
+            export_key="warehouse_counts",
+        )
         render_stock_chart(medications, key_prefix="warehouse")
         
         

@@ -86,7 +86,10 @@ def render_clinical_view(medications: pd.DataFrame) -> None:
         selected_review = build_replenishment_context(visible_medications).iloc[0]["ordering_review"]
         render_stock_review_badge(selected_review)
         
-    render_medication_table(visible_medications.reindex(columns=availability_columns))
+    render_medication_table(
+        visible_medications.reindex(columns=availability_columns),
+        export_key="clinical_inventory",
+    )
     
     st.subheader("Demo medication request")
     st.caption("Demo only. Nothing is saved, sent, deducted or approved.")

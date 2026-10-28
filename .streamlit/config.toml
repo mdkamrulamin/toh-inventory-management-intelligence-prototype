@@ -11,3 +11,5 @@ baseFontSize = 17
 
 # Main title, role headings, and section headings.
 headingFontSizes = ["32px", "27px", "24px", "21px", "19px", "17px"]
+[client]
+disableDataExport = false

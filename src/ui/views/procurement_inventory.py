@@ -32,7 +32,10 @@ def render_procurement_inventory_view(medications: pd.DataFrame) -> None:
         "Expiry dates are fictional batch dates."     
     )
     
-    render_medication_table(medications.reindex(columns=procurement_columns))
+    render_medication_table(
+        medications.reindex(columns=procurement_columns),
+        export_key="procurement_inventory",
+    )
     context = build_replenishment_context(medications)
     
     # Format missing optional inputs for display only.
@@ -55,6 +58,7 @@ def render_procurement_inventory_view(medications: pd.DataFrame) -> None:
     render_medication_table(
         display_context,
         title="Illustrative replenishment context",
+        export_key="procurement_replenishment",
     )
     render_stock_review_legend()
     
