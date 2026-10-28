@@ -9,6 +9,7 @@ from src.ui.components import (
     render_medication_table, 
     render_stock_chart,
 )
+from src.ui.stock_indicators import render_stock_review_legend
 
 def render_procurement_inventory_view(medications: pd.DataFrame) -> None:
     """Show synthetic inventory inputs and illustrative order-review context."""
@@ -31,7 +32,7 @@ def render_procurement_inventory_view(medications: pd.DataFrame) -> None:
         "Expiry dates are fictional batch dates."     
     )
     
-    render_medication_table(medications[procurement_columns])
+    render_medication_table(medications.reindex(columns=procurement_columns))
     context = build_replenishment_context(medications)
     
     # Format missing optional inputs for display only.
@@ -55,6 +56,7 @@ def render_procurement_inventory_view(medications: pd.DataFrame) -> None:
         display_context,
         title="Illustrative replenishment context",
     )
+    render_stock_review_legend()
     
     render_stock_chart(medications, key_prefix="procurement_inventory")
     

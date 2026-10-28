@@ -4,10 +4,12 @@ import pandas as pd
 import streamlit as st
 
 from src.services.clinical import build_clinical_request_preview
+from src.services.replenishment import build_replenishment_context
 from src.ui.components import (
     render_feature_placeholder,
     render_medication_table,
 )
+from src.ui.stock_indicators import render_stock_review_badge
 
 def render_clinical_view(medications: pd.DataFrame) -> None:
     """Show medication availability and a stock-aware demo request preview."""
@@ -50,6 +52,14 @@ def render_clinical_view(medications: pd.DataFrame) -> None:
         ]
         selected_medication = visible_medications.iloc[0]
         
+        # Show an unavailable unit explicitly; do not invent one.
+        selected_unit = selected_medication.get("stock_unit", pd.NA)
+        stock_unit = (
+            "N/A"
+            if pd.isna(selected_unit) or not str(selected_unit).strip()
+            else str(selected_unit).strip()
+        )
+        
         st.write(
             f"**Selected medication:** "
             f"{selected_medication['medication_name']} ({selected_id})"
@@ -63,7 +73,7 @@ def render_clinical_view(medications: pd.DataFrame) -> None:
         )
         unit_column.metric(
             "Stock unit",
-            selected_medication["stock_unit"],
+            stock_unit,
         )
         status_column.metric(
             "Recorded availability",
@@ -71,8 +81,12 @@ def render_clinical_view(medications: pd.DataFrame) -> None:
         )
         
         st.caption("Recorded availability is not a physical stock confirmation or a clinical suitability assessment.")
-    
-    render_medication_table(visible_medications[availability_columns])
+
+        st.caption("Inventory threshold context - separate from the request preview.")
+        selected_review = build_replenishment_context(visible_medications).iloc[0]["ordering_review"]
+        render_stock_review_badge(selected_review)
+        
+    render_medication_table(visible_medications.reindex(columns=availability_columns))
     
     st.subheader("Demo medication request")
     st.caption("Demo only. Nothing is saved, sent, deducted or approved.")
@@ -80,7 +94,6 @@ def render_clinical_view(medications: pd.DataFrame) -> None:
     if selected_medication is None:
         st.info("Select a medication above to preview a request.")
     else:
-        stock_unit = selected_medication["stock_unit"]
         
         # Keep this outside a form so quantity changes trigger a rerun.
         quantity = st.number_input(

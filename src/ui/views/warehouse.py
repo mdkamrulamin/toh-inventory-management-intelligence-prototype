@@ -3,11 +3,13 @@
 import pandas as pd
 import streamlit as st
 
+from src.services.replenishment import build_replenishment_context
 from src.ui.components import (
     render_feature_placeholder,
     render_medication_table, 
     render_stock_chart,
 )
+from src.ui.stock_indicators import render_stock_review_legend
 
 def render_warehouse_view(medications: pd.DataFrame) -> None:
         """Show respresentative stock locations, expiry, and past count observations."""
@@ -25,6 +27,15 @@ def render_warehouse_view(medications: pd.DataFrame) -> None:
         
         # Reindex adds missing optional columns without changing source data.
         warehouse_data = medications.reindex(columns=warehouse_columns).copy()
+        
+        # Reuse the same medication-level review result as Procurement.
+        review_by_id = (
+            build_replenishment_context(medications)
+            .set_index("medication_id")["ordering_review"]
+        )
+        warehouse_data["ordering_review"] = (
+            warehouse_data["medication_id"].map(review_by_id)
+        )
         
         warehouse_data["primary_location"] = (
             warehouse_data["primary_location"].astype("string").fillna("N/A")
@@ -46,6 +57,7 @@ def render_warehouse_view(medications: pd.DataFrame) -> None:
         
         render_medication_table(warehouse_data, title="Representative warehouse stock",)
         
+        render_stock_review_legend()
         count_columns = [
             "medication_id",
             "medication_name",
