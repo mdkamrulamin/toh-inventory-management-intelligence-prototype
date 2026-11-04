@@ -203,7 +203,6 @@ def render_clinical_view(medications: pd.DataFrame) -> None:
         quantity = st.number_input(
             f"Requested quantity - stock unit: {stock_unit}",
             min_value=1,
-            value=1,
             step=1,
             key=f"clinical_request_quantity_{selected_id}",
         )
