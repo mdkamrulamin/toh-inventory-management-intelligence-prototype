@@ -6,7 +6,7 @@ import streamlit as st
 from src.services.summary import summarize_inventory
 from src.ui.components import render_feature_placeholder
 
-def render_executive_view(medications: pd.DataFrame) -> None:
+def render_executive_view(medications: pd.DataFrame | None = None, *, summary: dict[str, int | float | None] | None = None) -> None:
     """Show synthetic snapshot summaries and illustrative executive KPI areas."""
     st.write("Review aggregate inventory exposure and recorded availability.")
     st.caption(
@@ -14,7 +14,11 @@ def render_executive_view(medications: pd.DataFrame) -> None:
         "Each medication record represents one unique sample SKU."
     )
     
-    summary = summarize_inventory(medications)
+    if summary is None:
+        if medications is None:
+            raise ValueError("Executive requires inventory data or a prepared summary.")
+    
+        summary = summarize_inventory(medications)
     
     share = summary["zero_stock_share_percent"]
     share_text = "N/A" if share is None else f"{share:.1f}%"
