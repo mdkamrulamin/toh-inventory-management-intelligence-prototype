@@ -27,7 +27,7 @@ from src.ui.styles import (
 from src.ui.views import ROLE_RENDERERS
 
 def main() -> None:
-    """Configure shared presentation, load data, and render four roles."""
+    """Configure presentation and render roles from the shared demo session."""
     
     st.set_page_config(
         page_title=APP_TITLE,

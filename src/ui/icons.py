@@ -5,7 +5,7 @@ from functools import lru_cache
 
 from src.config import PROJECT_ROOT, ROLE_ICON_FILES
 
-@lru_cache(maxsize=4)
+@lru_cache(maxsize=8)
 def role_icon_data_uri(role_id: str) -> str:
     """Embed a local PNG without depending on an external image server."""
     

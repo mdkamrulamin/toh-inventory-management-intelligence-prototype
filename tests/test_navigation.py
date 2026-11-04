@@ -10,7 +10,7 @@ from src.ui.navigation import (
 
 class ClinicalNavigationTests(unittest.TestCase):
     def test_other_roles_clear_clinical_selection(self):
-        for role in ("Procurement", "Warehouse", "Executive"):
+        for role in ("Pharmacist", "Procurement", "Warehouse", "Executive"):
             with self.subTest(role=role):
                 state = {
                     "dashboard_role_tabs": role,

@@ -1,4 +1,4 @@
-"""Shared visual presentation for the existing four-view dashboard."""
+"""Shared dashboard presentation."""
 
 from pathlib import Path
 

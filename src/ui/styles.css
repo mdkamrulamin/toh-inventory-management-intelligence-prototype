@@ -19,6 +19,7 @@
 
 /* All role banners share the same spacing and border treatment. */
 .st-key-role_header_clinical,
+.st-key-role_header_pharmacist,
 .st-key-role_header_procurement_inventory,
 .st-key-role_header_warehouse,
 .st-key-role_header_executive {
@@ -33,6 +34,10 @@
 /* Audience accents identify roles, not stock classifications. */
 .st-key-role_header_clinical {
     background-color: #CFE8FF;
+}
+
+.st-key-role_header_pharmacist {
+    background-color: #EDE9FE;
 }
 
 .st-key-role_header_procurement_inventory {
@@ -98,6 +103,7 @@
 
 /* Larger illustrations in role banners. */
 .st-key-role_header_clinical h2 img,
+.st-key-role_header_pharmacist h2 img,
 .st-key-role_header_procurement_inventory h2 img,
 .st-key-role_header_warehouse h2 img,
 .st-key-role_header_executive h2 img {
@@ -248,6 +254,7 @@
     }
 
     .st-key-role_header_clinical,
+    .st-key-role_header_pharmacist,
     .st-key-role_header_procurement_inventory,
     .st-key-role_header_warehouse,
     .st-key-role_header_executive {

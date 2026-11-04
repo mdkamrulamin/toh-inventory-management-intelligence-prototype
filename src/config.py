@@ -1,4 +1,4 @@
-""" Shared application settings and client-confirmed labels """
+"""Shared application settings and provisional prototype labels."""
 from pathlib import Path
 
 APP_TITLE = "(TOH) Inventory Management & Intelligence Prototype"
@@ -14,6 +14,7 @@ PROTOTYPE_NOTICE = (
 # Stable role IDS, we will change displayed labels later
 ROLE_LABELS: dict[str, str] = {
     "clinical": "Clinical",
+    "pharmacist": "Pharmacist",
     "procurement_inventory": "Procurement",
     "warehouse": "Warehouse",
     "executive": "Executive",
@@ -23,6 +24,7 @@ ROLE_LABELS: dict[str, str] = {
 # Material Symbols are supported directly by Streamlit.
 ROLE_ICON_FILES: dict[str, str] = {
     "clinical": "doctor.png",
+    "pharmacist": "pharmacist.png",
     "procurement_inventory": "procurement.png",
     "warehouse": "warehouse.png",
     "executive": "executive.png",
@@ -33,6 +35,11 @@ ROLE_CONTEXT: dict[str, str] = {
     "clinical": (
         "Process context: medication request and availability review. "
         "Alternative products require clinical/pharmacy approval."
+    ),
+    "pharmacist": (
+        "Process context: synthetic request verification, availability "
+        "review, release routing and shortage escalation. "
+        "Demo actions do not constitute real pharmacist authorization."
     ),
     "procurement_inventory": (
         "Process context: inventory verification and monitoring; "
