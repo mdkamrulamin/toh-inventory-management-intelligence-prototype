@@ -15,6 +15,7 @@ from src.config import SAMPLE_MEDICATIONS_PATH
 from src.services.workflow_models import (
     Role,
     SubmitRequestInput,
+    SupplyFeedbackInput,
     WorkflowError,
 )
 from src.ui.session import (
@@ -209,3 +210,89 @@ def pharmacist_action_callback(
         store[reason_key] = ""
         
     _notice(store, "success", result.message)
+    
+def warehouse_fulfillment_callback(
+    request_id: str,
+    confirmation_key: str,
+    expected_run_id: str,
+    expected_revision: int,
+    *,
+    source_path: str | Path = SAMPLE_MEDICATIONS_PATH,
+    state_store: MutableMapping | None = None,
+    now: datetime | None = None,
+) -> None:
+    """Confirm one full synthetic fulfillment through the shared service.
+    The confirmation records deliberate user intent. The service still
+    checks release status, latest stock, matching units, duplicate
+    fulfillment and the session revision.
+    """
+    store = _store(state_store)
+    
+    try:
+        if store.get(confirmation_key) is not True:
+            raise WorkflowError("confirmation_required", "Confirm full-quantity synthetic fulfillment first.")
+        
+        result = apply_workflow_action(
+            "fulfill_request",
+            request_id,
+            acting_role=Role.WAREHOUSE,
+            expected_run_id=expected_run_id,
+            expected_revision=expected_revision,
+            source_path=source_path,
+            state_store=store,
+            now=now,
+        )
+    except (OSError, ValueError) as error:
+        _notice(store, "error", str(error))
+        return
+    
+    # This callback runs before the checkbox is rendered again.
+    store[confirmation_key] = False
+    _notice(store, "success", f"{result.message} This is synthetic fulfillment only.")
+    
+def procurement_feedback_callback(
+    request_id: str,
+    feedback_key: str,
+    expected_date_key: str | None,
+    expected_run_id: str,
+    expected_revision: int,
+    *,
+    source_path: str | Path = SAMPLE_MEDICATIONS_PATH,
+    state_store: MutableMapping | None = None,
+    now: datetime | None = None,
+) -> None:
+    """Record request-linked synthetic feedback without changing stock.
+    Form values are read when the callback runs. An omitted expected date
+    lets the existing service use its supported lead-time illustration,
+    or retain an unavailable date when the source lacks that context.
+    """
+    store = _store(state_store)
+    
+    try:
+        inputs = SupplyFeedbackInput(
+            feedback=store.get(feedback_key, ""),
+            expected_delivery=(
+                None
+                if expected_date_key is None
+                else store.get(expected_date_key)
+            ),
+        )
+        result = apply_workflow_action(
+            "update_supply_feedback",
+            request_id,
+            inputs,
+            acting_role=Role.PROCUREMENT,
+            expected_run_id=expected_run_id,
+            expected_revision=expected_revision,
+            source_path=source_path,
+            state_store=store,
+            now=now,
+        )
+    except (OSError, ValueError) as error:
+        _notice(store, "error", str(error))
+        return
+
+    # Keep entered feedback available for deliberate editing.
+    # An identical repeat is rejected by the shared service.
+    _notice(store, "success", result.message)
+    

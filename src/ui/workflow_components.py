@@ -59,6 +59,7 @@ def render_request_table(requests: list[dict], *, table_key: str) -> None:
             "Requesting location": request["requesting_location"],
             "Demo urgency": request["urgency"].capitalize(),
             "Status": status_label(request["status"]),
+            "Outcome": OUTCOME_LABELS.get(request.get("outcome"), "—"),
             "Received time (UTC)": request["received_time"],
         }
         for request in requests
@@ -66,6 +67,7 @@ def render_request_table(requests: list[dict], *, table_key: str) -> None:
     
     if not rows:
         st.info("No synthetic requests to display.")
+        return
         
     st.caption("Synthetic requests from this demo session. Request IDs apply within the current session.")
     render_workflow_table(pd.DataFrame(rows), table_key=table_key)
@@ -186,6 +188,10 @@ def render_request_details(request: dict, *, key_prefix: str) -> None:
             f"{fulfillment['stock_before']:g} | "
             f"Recorded stock after: "
             f"{fulfillment['stock_after']:g}"
+        )
+        st.caption(
+            f"Demo actor: {fulfillment['fulfilled_by']} | "
+            f"Time (UTC): {fulfillment['fulfilled_time']}"
         )
         
     history = request.get("status_history", [])

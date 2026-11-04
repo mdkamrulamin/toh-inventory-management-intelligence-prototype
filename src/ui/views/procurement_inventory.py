@@ -1,4 +1,4 @@
-"""Procurement and inventory/ordering dashboard view"""
+"""Procurement shortage feedback and independent inventory monitoring."""
 
 import pandas as pd
 import streamlit as st
@@ -9,11 +9,23 @@ from src.ui.components import (
     render_medication_table, 
     render_stock_chart,
 )
+from src.ui.handoff_panels import render_procurement_handoffs
 from src.ui.stock_indicators import render_stock_review_legend
 
 def render_procurement_inventory_view(medications: pd.DataFrame) -> None:
-    """Show synthetic inventory inputs and illustrative order-review context."""
-    st.write("Review recorded stock, consumption, costs, suppliers and information relevant to ordering review.")
+    """Show linked shortages and routine replenishment-review context."""
+    st.write(
+        "Review linked demo shortages, recorded stock, consumption, "
+        "costs, suppliers and information relevant to ordering review."
+    )
+    
+    render_procurement_handoffs(medications)
+    
+    st.subheader("Routine inventory monitoring")
+    st.caption(
+        "This monitoring is available without a Clinical request. "
+        "Threshold flags do not submit requests or place orders."
+    )
     
     #Retain stock units so quantities and costs have clear meaning.
     procurement_columns = [
@@ -67,15 +79,17 @@ def render_procurement_inventory_view(medications: pd.DataFrame) -> None:
     # Classification methods and replenishment rules waiting for team findings.
     render_feature_placeholder(
         "ABC financial classification",
-        "Financial ranking requires an agreed analysis period and method. "
-        "The existing category field describes dosage form, not ABC class. "
-        "No ABC ranking or clinical-criticality classification is assigned.",
+        "Financial ranking requires an agreed analysis period and "
+        "method. The existing category field describes dosage form, "
+        "not ABC class. No ABC ranking or clinical-criticality "
+        "classification is assigned.",
     )
     
     render_feature_placeholder(
         "Replenishment-method selection",
-        "Method selection remains subject to research and agreed assumptions. "
-        "EOQ is not a universal ordering rule. "
-        "No order quantity is calculated and no purchase order is created.",
+        "Method selection remains subject to research and agreed "
+        "assumptions. EOQ is not a universal ordering rule. "
+        "No order quantity is calculated and no purchase order "
+        "is created.",
     )
     

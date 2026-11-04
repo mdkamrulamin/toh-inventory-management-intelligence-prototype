@@ -96,7 +96,7 @@ class FulfillmentRecord:
     stock_before: int | float
     stock_after: int | float
     fulfilled_time: str
-    filfilled_by: str = "Demo user"
+    fulfilled_by: str = "Demo user"
     fulfilled_by_role: Role = Role.WAREHOUSE
     
 @dataclass(frozen=True)

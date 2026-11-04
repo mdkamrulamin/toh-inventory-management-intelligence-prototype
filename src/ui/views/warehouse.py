@@ -1,4 +1,4 @@
-"""Warehouse dashboard view."""
+"""Warehouse inventory and synthetic request fulfillment."""
 
 import pandas as pd
 import streamlit as st
@@ -9,11 +9,17 @@ from src.ui.components import (
     render_medication_table, 
     render_stock_chart,
 )
+from src.ui.handoff_panels import render_warehouse_handoffs
 from src.ui.stock_indicators import render_stock_review_legend
 
 def render_warehouse_view(medications: pd.DataFrame) -> None:
-        """Show respresentative stock locations, expiry, and past count observations."""
-        st.write("Review recorded stock, representative storage locations, expiry dates, and historical count observations.")
+        """Show Warehouse handoffs and current session inventory."""
+        st.write(
+            "Review released demo requests, recorded stock, representative "
+            "storage locations, expiry dates and historical count observations."            
+        )
+        
+        render_warehouse_handoffs()
         
         warehouse_columns = [
             "medication_id",
@@ -86,8 +92,10 @@ def render_warehouse_view(medications: pd.DataFrame) -> None:
         
         # Historical counts are displayed without replacing current recorded stock.
         st.caption(
-            "Counted quantities are past synthetic observations. Transactions since each "
-            "count are not modeled, so this comparison cannot establish current stock accuracy, loss, or shrinkage."
+            "Counted quantities are past synthetic observations. The full "
+            "transaction history since each count is unavailable. Current "
+            "session fulfillment does not establish physical stock accuracy, "
+            "loss or shrinkage."        
         )
         
         render_medication_table(
@@ -105,15 +113,15 @@ def render_warehouse_view(medications: pd.DataFrame) -> None:
         )
         
         render_feature_placeholder(
-            "Receiving and picking",
-            "Receiving checks, picking information, and dispatch status "
-            "await the agreed workflow and supporting records."
+            "Receiving and physical picking",
+            "Receiving checks, physical picking and dispatch confirmation "
+            "remain outside this synthetic fulfillment demonstration.",
         )
         
         render_feature_placeholder(
             "Stock movement and reconciliation",
-            "Receipts, issues, and transfers are not recorded in this demo. "
-            "Transaction history and count-time balances are needed "
-            "before a reconciliation result can be established.",
+            "Only request-linked synthetic fulfillment is recorded in this "
+            "session. Physical receipts, transfers and count reconciliation "
+            "require additional records and agreed workflows.",
         )
         
