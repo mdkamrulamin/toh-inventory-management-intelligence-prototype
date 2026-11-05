@@ -22,7 +22,8 @@
 .st-key-role_header_pharmacist,
 .st-key-role_header_procurement_inventory,
 .st-key-role_header_warehouse,
-.st-key-role_header_executive {
+.st-key-role_header_executive,
+.st-key-role_header_reporting {
     padding: 1rem 1.25rem;
     margin-top: 0.75rem;
     margin-bottom: 1rem;
@@ -50,6 +51,10 @@
 
 .st-key-role_header_executive {
     background-color: #CDECCF;
+}
+
+.st-key-role_header_reporting {
+    background-color: #D5F0EE;
 }
 
 /* Improve the native tab controls without changing their behavior. */
@@ -106,7 +111,8 @@
 .st-key-role_header_pharmacist h2 img,
 .st-key-role_header_procurement_inventory h2 img,
 .st-key-role_header_warehouse h2 img,
-.st-key-role_header_executive h2 img {
+.st-key-role_header_executive h2 img 
+.st-key-role_header_reporting h2 img {
     width: 44px;
     height: 44px;
     max-height: 44px;
@@ -257,7 +263,8 @@
     .st-key-role_header_pharmacist,
     .st-key-role_header_procurement_inventory,
     .st-key-role_header_warehouse,
-    .st-key-role_header_executive {
+    .st-key-role_header_executive,
+    .st-key-role_header_reporting {
         padding: 0.85rem;
     }
 }

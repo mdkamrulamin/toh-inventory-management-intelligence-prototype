@@ -18,6 +18,7 @@ ROLE_LABELS: dict[str, str] = {
     "procurement_inventory": "Procurement",
     "warehouse": "Warehouse",
     "executive": "Executive",
+    "reporting": "Reporting",
 }
 
 # Use one consistent icon family alongside persistent audience text labels.
@@ -28,6 +29,7 @@ ROLE_ICON_FILES: dict[str, str] = {
     "procurement_inventory": "procurement.png",
     "warehouse": "warehouse.png",
     "executive": "executive.png",
+    "reporting": "reporting.png",
 }
 
 #Audience context
@@ -53,6 +55,11 @@ ROLE_CONTEXT: dict[str, str] = {
         "Process context: overall inventory performance monitoring "
         "and policy review."
     ),
+    "reporting": (
+        "Process context: consolidated synthetic inventory reports, "
+        "replenishment context and current demo request information. "
+        "This tab does not enforce authenticated access restrictions."
+    ),
 }
 
 # Display labels are separate from the internal data-field names.
@@ -74,6 +81,28 @@ FIELD_LABELS: dict[str, str] = {
     "last_count_date": "Last count date",
     "counted_stock": "Past counted stock",
     "ordering_review": "Illustrative ordering review",
+    "measure": "Measure",
+    "value": "Value",
+    "measure_unit": "Measure unit",
+    "report_name": "Report",
+    "synthetic_data_notice": "Synthetic data notice",
+    "report_note": "Scope and limitations",
+    "run_id": "Demo run ID",
+    "request_id": "Request ID",
+    "requested_quantity": "Requested quantity",
+    "request_unit": "Request unit",
+    "requesting_location": "Requesting location",
+    "request_urgency": "Demo urgency",
+    "request_status": "Demo request status",
+    "request_outcome": "Demo request outcome",
+    "request_reason": "Request reason",
+    "status_reason": "Latest status reason",
+    "received_time": "Received time (UTC)",
+    "updated_time": "Updated time (UTC)",
+    "supply_update": "Synthetic supply update",
+    "expected_delivery": "Illustrative expected date",
+    "fulfillment_quantity": "Demo fulfilled quantity",
+    "fulfilled_time": "Demo fulfillment time (UTC)",
 }
 
 # Resolve data paths from project loc
