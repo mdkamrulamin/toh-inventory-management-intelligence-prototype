@@ -57,10 +57,11 @@ def main() -> None:
         
         notice = take_notice()
         if notice is not None:
-            if notice["kind"] == "success":
-                st.success(notice["message"])
-            else:
-                st.error(notice["message"])
+            st.toast(
+                notice["message"],
+                icon=(
+                    "✅" if notice["kind"] == "success" else "⚠️"),
+            )
                 
         try:
             ensure_demo_session(SAMPLE_MEDICATIONS_PATH)

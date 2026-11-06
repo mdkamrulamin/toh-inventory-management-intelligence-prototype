@@ -11,6 +11,7 @@ from src.ui.session import (
     read_current_availability,
     read_request_details,
     read_requests,
+    take_notice,
 )
 from src.ui.stock_indicators import render_stock_review_badge
 from src.ui.workflow_actions import pharmacist_action_callback
@@ -82,11 +83,30 @@ def _render_stock_context(medications: pd.DataFrame, request: dict) -> dict:
     
     return availability
 
+@st.fragment
 def _render_review_actions(request: dict, availability: dict) -> None:
     """Offer only actions relevant to the request's current status."""
+    info = get_session_info()
+    # A successful workflow action changes the business revision.
+    # Refresh the full app then, so queues, details and other views
+    # receive the updated state. Typing alone does not change revision.
+    if (info.run_id != request["run_id"] or info.revision != availability["revision"]):
+        st.rerun()
+        
+    notice = take_notice()
+    if notice is not None:
+        st.toast(
+            notice["message"],
+            icon=(
+                "✅"
+                if notice["kind"] == "success"
+                else "⚠️"
+            ),
+        )
+    
+    
     status = request["status"]
     request_id = request["request_id"]
-    info = get_session_info()
     
     st.subheader("Synthetic review actions")
     st.caption("Actions are recorded as Demo user. They are not real pharmacist authorization.")
@@ -117,16 +137,18 @@ def _render_review_actions(request: dict, availability: dict) -> None:
         return
     
     reason_key = (f"workflow_ui_pharmacist_reason_{info.run_id}_{request_id}")
-    reason = st.text_area(
+    reason = st.text_input(
         "Demo decision reason",
         key=reason_key,
+        live="0ms",
+        placeholder="Enter a reason for this demo decision",
         help=(
             "Required for release, final return, shortage escalation, "
             "recall and closure. Optional when returning to the queue. "
             "Do not enter patient information."
         ),
     )
-    has_reason = bool(reason.strip())
+    has_reason = bool((reason or "").strip())
     
     def action_button(label: str, action_name: str, *, disabled: bool = False) -> None:
         st.button(

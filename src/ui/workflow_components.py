@@ -95,8 +95,7 @@ def select_request(requests: list[dict], *, label: str, widget_key: str) -> str 
             f"{request_id} | "
             f"{by_id[request_id]['medication_name']} | "
             f"{by_id[request_id]['quantity']} "
-            f"{by_id[request_id]['unit']} | "
-            f"{status_label(by_id[request_id]['status'])}"
+            f"{by_id[request_id]['unit']}"
         ),
     )
     
