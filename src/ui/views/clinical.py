@@ -186,7 +186,7 @@ def render_clinical_view(medications: pd.DataFrame) -> None:
 
         st.caption("Inventory threshold context - separate from the request preview.")
         selected_review = build_replenishment_context(visible_medications).iloc[0]["ordering_review"]
-        render_stock_review_badge(selected_review)
+        render_stock_review_badge(selected_review, prominent=True)
         
     render_medication_table(
         visible_medications.reindex(columns=availability_columns),

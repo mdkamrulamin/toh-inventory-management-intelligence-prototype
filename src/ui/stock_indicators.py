@@ -1,6 +1,7 @@
 """Shared inventory-review colors, badges, and explanatory legend."""
 
 from dataclasses import dataclass
+from html import escape
 
 import streamlit as st
 
@@ -67,9 +68,20 @@ def stock_review_cell_style(label: object) -> str:
         "font-weight: 600;" 
     )
     
-def render_stock_review_badge(label: str) -> None:
-    """Pair the inventory-review label with its color name and badge."""
+def render_stock_review_badge(label: str, *, prominent: bool = False) -> None:
+    """Display the shared review result, optionally with greater prominence."""
     style = stock_review_style(label)
+    
+    if prominent:
+        st.html(
+            f"""
+            <div class="clinical-stock-review" style="color: {style.foreground}; background-color: {style.background}; border-color: {style.foreground};">
+                <strong>{escape(style.name)}</strong>
+                <span> - {escape(label)}</span>
+            </div>
+            """
+        )
+        return
     
     st.badge(
         f"{style.name} — {label}",
