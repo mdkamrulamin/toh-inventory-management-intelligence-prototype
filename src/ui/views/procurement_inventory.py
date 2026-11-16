@@ -3,7 +3,13 @@
 import pandas as pd
 import streamlit as st
 
-from src.services.replenishment import build_replenishment_context
+from src.services.analytics import (
+    ABC_SCOPE,
+    ANALYSIS_BASIS,
+    LEAD_TIME_BASIS,
+    build_stock_analytics,
+)
+from src.services.reporting import prepare_report_display
 from src.ui.components import (
     render_feature_placeholder,
     render_medication_table, 
@@ -13,10 +19,10 @@ from src.ui.handoff_panels import render_procurement_handoffs
 from src.ui.stock_indicators import render_stock_review_legend
 
 def render_procurement_inventory_view(medications: pd.DataFrame) -> None:
-    """Show linked shortages and routine replenishment-review context."""
+    """Show linked shortages and supported synthetic stock analytics."""
     st.write(
         "Review linked demo shortages, recorded stock, consumption, "
-        "costs, suppliers and information relevant to ordering review."
+        "costs, suppliers and illustrative inventory analytics."
     )
     
     render_procurement_handoffs(medications)
@@ -40,56 +46,105 @@ def render_procurement_inventory_view(medications: pd.DataFrame) -> None:
     ]
     
     st.caption(
-        "Consumption uses stock units per month; costs are CAD per stock unit. "
-        "Expiry dates are fictional batch dates."     
+        "Consumption uses supplied stock units per illustrative month; costs are CAD per stock unit. Expiry dates are synthetic."  
     )
     
     render_medication_table(
-        medications.reindex(columns=procurement_columns),
+        prepare_report_display(
+            medications.reindex(columns=procurement_columns)
+        ),
         export_key="procurement_inventory",
     )
-    context = build_replenishment_context(medications)
-    
-    # Format missing optional inputs for display only.
-    # Their underlying numerical values remain missing, rather than zero.
-    display_context = context.copy()
-    for column in (
+    analytics = build_stock_analytics(medications)
+    replenishment_columns = [
+        "medication_id",
+        "medication_name",
+        "current_stock",
+        "stock_unit",
+        "average_monthly_consumption",
         "reorder_point",
         "safety_stock_level",
         "lead_time_days",
-    ):
-        display_context[column] = (context[column].astype("string").fillna("N/A"))
-        
+        "stock_coverage_months",
+        "reorder_gap",
+        "lead_time_demand",
+        "ordering_review",
+        "analytics_note",
+        "lead_time_basis",
+    ]
+    
     st.caption(
-        "Thresholds and lead times are synthetic, client-unvalidated examples. "
-        "Positive stock at or below its supplied reorder point is flagged "
-        "for review; zero recorded stock is shown separately. "
-        "These flags do not trigger purchases."
+        "ROP, safety stock and lead time are supplied illustrative "
+        "parameters. Coverage and threshold gaps use current session stock. "
+        "Coverage is not a predicted stockout date; the gap is not an "
+        "order recommendation. Safety stock does not replace the supplied ROP."
     )
+    st.caption(LEAD_TIME_BASIS)
     
     render_medication_table(
-        display_context,
+        prepare_report_display(analytics.rows.reindex(columns=replenishment_columns)),
         title="Illustrative replenishment context",
         export_key="procurement_replenishment",
     )
+    
     render_stock_review_legend()
     
     render_stock_chart(medications, key_prefix="procurement_inventory")
     
-    # Classification methods and replenishment rules waiting for team findings.
-    render_feature_placeholder(
-        "ABC financial classification",
-        "Financial ranking requires an agreed analysis period and "
-        "method. The existing category field describes dosage form, "
-        "not ABC class. No ABC ranking or clinical-criticality "
-        "classification is assigned.",
+    st.caption(ANALYSIS_BASIS)
+    st.caption(ABC_SCOPE)
+    st.caption(
+        "Financial ABC does not establish clinical priority. Dosage form remains separate from ABC class."
     )
+    total = analytics.summary["total_monthly_consumption_value_cad"]
+    st.metric(
+        "Illustrative monthly consumption value (CAD/month)",
+        "N/A" if total is None else f"{total:,.2f}",
+    )
+    
+    st.caption(
+        f"Complete ABC inputs: "
+        f"{analytics.summary['complete_abc_count']} of "
+        f"{analytics.summary['population_count']} records. "
+        f"{analytics.summary['abc_note']}"
+    )
+    
+    abc_columns = [
+        "medication_id",
+        "medication_name",
+        "category",
+        "stock_unit",
+        "average_monthly_consumption",
+        "unit_cost",
+        "monthly_consumption_value_cad",
+        "abc_share_percent",
+        "abc_cumulative_share_percent",
+        "abc_class",
+        "analytics_note",
+        "abc_note",
+        "analysis_basis",
+        "abc_scope",
+    ]
+    
+    abc_rows = analytics.rows.sort_values(
+        ["monthly_consumption_value_cad", "medication_id"],
+        ascending=[False, True],
+        na_position="last",
+    )
+    
+    render_medication_table(
+        prepare_report_display(abc_rows.reindex(columns=abc_columns)),
+        title="Illustrative ABC — average monthly consumption value",
+        export_key="procurement_abc",
+    )
+    
+    
     
     render_feature_placeholder(
         "Replenishment-method selection",
-        "Method selection remains subject to research and agreed "
-        "assumptions. EOQ is not a universal ordering rule. "
-        "No order quantity is calculated and no purchase order "
-        "is created.",
+        "N/A: calculated safety stock, optimized reorder points, "
+        "EOQ and Newsvendor recommendations require additional inputs "
+        "and agreed models. Supplied parameters are preserved. "
+        "No purchase order is created.",
     )
     

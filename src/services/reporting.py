@@ -4,7 +4,8 @@ These functions do not submit requests, change inventory or write files.
 The UI supplies current session projections and uses its existing table
 renderer/export controls.
 """
-
+from decimal import Decimal
+from numbers import Real
 from dataclasses import dataclass
 from datetime import date, datetime
 
@@ -20,6 +21,7 @@ from src.services.replenishment import (
 )
 from src.services.summary import summarize_inventory
 from src.services.workflow_models import RequestStatus
+from src.services.analytics import build_stock_analytics
 
 REPORT_LABELS = {
     "inventory_snapshot": "Inventory snapshot",
@@ -31,6 +33,8 @@ REPORT_LABELS = {
     "historical_counts": "Historical count observations",
     "request_statuses": "Current synthetic requests",
     "request_summary": "Whole-session request summary",
+    "stock_analytics": "Illustrative stock analytics",
+    "abc_summary": "Whole-population ABC category totals",
 }
 
 INVENTORY_COLUMNS = {
@@ -65,6 +69,11 @@ INVENTORY_COLUMNS = {
         "lead_time_days",
         "supplier",
         "ordering_review",
+        "stock_coverage_months",
+        "reorder_gap",
+        "lead_time_demand",
+        "analytics_note",
+        "lead_time_basis",
     ),
     "supplier_cost": (
         "medication_id",
@@ -73,6 +82,8 @@ INVENTORY_COLUMNS = {
         "stock_unit",
         "unit_cost",
         "supplier",
+        "recorded_inventory_value_cad",
+        "analytics_note",
     ),
     "expiry_overview": (
         "medication_id",
@@ -91,6 +102,30 @@ INVENTORY_COLUMNS = {
         "counted_stock",
         "primary_location",
     ),
+    "stock_analytics": (
+        "medication_id",
+        "medication_name",
+        "category",
+        "stock_unit",
+        "average_monthly_consumption",
+        "unit_cost",
+        "monthly_consumption_value_cad",
+        "abc_share_percent",
+        "abc_cumulative_share_percent",
+        "abc_class",
+        "current_stock",
+        "recorded_inventory_value_cad",
+        "stock_coverage_months",
+        "reorder_gap",
+        "lead_time_demand",
+        "ordering_review",
+        "analytics_note",
+        "abc_note",
+        "analysis_basis",
+        "abc_scope",
+        "lead_time_basis",
+    ),
+    
 }
 
 INVENTORY_REPORT_IDS = (
@@ -101,6 +136,8 @@ INVENTORY_REPORT_IDS = (
     "expiry_overview",
     "inventory_summary",
     "historical_counts",
+    "stock_analytics",
+    "abc_summary",
 )
 
 REPORT_NOTES = {
@@ -109,9 +146,6 @@ REPORT_NOTES = {
     ),
     "zero_stock": (
         "Current recorded stock equals zero; this is not a historical hospital stockout measure."
-    ),
-    "replenishment_review": (
-        "Thresholds and lead times are synthetic, unvalidated examples. No order quantity or purchase order is generated."
     ),
     "supplier_cost": (
         "Synthetic suppliers and CAD unit costs; no supplier transaction or hospital cost-saving claim."
@@ -130,6 +164,23 @@ REPORT_NOTES = {
     ),
     "request_summary": (
         "Whole demo session. Current states and final outcomes are separate: fulfilled requests close with a fulfilled outcome."
+    ),
+    "stock_analytics": (
+        "Synthetic average-month analysis. ABC uses the complete loaded "
+        "population before display filters. Coverage uses current session "
+        "stock and is not a predicted stockout date. The threshold gap "
+        "is not an order recommendation."
+    ),
+    "abc_summary": (
+        "Whole loaded medication population. Display filters are not "
+        "applied. Category shares use monthly consumption value, "
+        "not current shelf stock or clinical criticality."
+    ),
+    "replenishment_review": (
+        "ROP, safety stock and lead time are supplied illustrative "
+        "parameters. Coverage and threshold gap are calculated from "
+        "current session stock. Lead-time demand assumes a 30-day month. "
+        "No optimized buffer, order quantity or purchase order is generated."
     ),
 }
 
@@ -277,7 +328,34 @@ def build_inventory_report(medications: pd.DataFrame, report_id: str, *, filters
     if report_id not in INVENTORY_REPORT_IDS:
         raise ValueError("Unsupported inventory report.")
     
-    selected = filter_inventory(medications, filters)
+    if report_id == "abc_summary":
+        summary = build_stock_analytics(medications).summary
+        report = pd.DataFrame(summary["class_totals"])
+        for column in (
+            "population_count",
+            "complete_abc_count",
+            "total_monthly_consumption_value_cad",
+            "abc_note",
+            "analysis_basis",
+            "abc_scope",
+        ):
+            report[column] = summary[column]
+        return _annotate(report, report_id)
+    analytics_reports = {"stock_analytics", "replenishment_review", "supplier_cost"}
+    
+    # Calculate on the complete population before selecting report rows.
+    source = (
+        build_stock_analytics(medications).rows
+        if report_id in analytics_reports else medications
+    )
+    selected = filter_inventory(source, filters)
+    
+    if report_id == "stock_analytics":
+        selected = selected.sort_values(
+            ["monthly_consumption_value_cad", "medication_id"],
+            ascending=[False, True],
+            na_position="last",
+        )
     
     if report_id == "inventory_summary":
         summary = summarize_inventory(selected)
@@ -463,8 +541,39 @@ def prepare_report_display(report: pd.DataFrame) -> pd.DataFrame:
                 formatted_values.append(f"{float(value):g}")
 
         display["value"] = formatted_values
+        
+    # Round only the display/export copy. ABC decisions remain unrounded.
+    for column in (
+        "unit_cost",
+        "monthly_consumption_value_cad",
+        "recorded_inventory_value_cad",
+        "total_monthly_consumption_value_cad",
+        "abc_share_percent",
+        "abc_cumulative_share_percent",
+        "stock_coverage_months",
+        "reorder_gap",
+        "lead_time_demand",
+    ):
+        if column in display.columns:
+            display[column] = display[column].map(
+                lambda value: (
+                    "N/A"
+                    if pd.isna(value) else f"{value:.2f}"
+                )
+            )
 
     # Convert only the display copy before inserting string missing labels.
-    return display.astype("object").where(pd.notna(display), "N/A")
+    display = display.astype("object").where(pd.notna(display), "N/A")
     
+    # Avoid mixed number/text columns in Streamlit's Arrow transport.
+    for column in display.columns:
+        values = display[column]
+        has_text = any(isinstance(value, str) for value in values)
+        has_number = any(
+            isinstance(value, (Real, Decimal))
+            for value in values
+        )
         
+        if has_text and has_number:
+            display[column] = values.astype("string")
+    return display

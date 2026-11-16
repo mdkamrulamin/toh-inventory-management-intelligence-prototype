@@ -73,7 +73,7 @@ def _inventory_filters(medications: pd.DataFrame, *, disabled: bool = False) -> 
     with st.expander("Inventory filters", expanded=not disabled):
         if disabled:
             st.caption(
-                "Inactive for the whole-session request summary. That report always includes every session request."
+                "Inactive for this whole-population or whole-session report. Stored inventory filters are not applied."
             )
         else:
             st.caption(
@@ -241,7 +241,7 @@ def _render_report_table(report: pd.DataFrame, report_id: str) -> None:
         "Use the table toolbar to download the current report."
     )
 
-    if report_id in {"inventory_summary", "request_statuses", "request_summary"}:
+    if report_id in {"inventory_summary", "request_statuses", "request_summary", "abc_summary"}:
         st.subheader(REPORT_LABELS[report_id])
         render_workflow_table(
             display.rename(columns=FIELD_LABELS),
@@ -279,12 +279,17 @@ def render_reporting_view(medications: pd.DataFrame) -> None:
     )
 
     whole_session = report_id == "request_summary"
-    inventory_filters = _inventory_filters(medications, disabled=whole_session)
+    whole_population = report_id == "abc_summary"
+    inventory_filters = _inventory_filters(medications, disabled=whole_session or whole_population)
 
     try:
         if whole_session:
             st.info("Scope: every request in the active demo session. Inventory and request filters are not applied.")
             report = build_request_summary(read_request_summary())
+        
+        elif whole_population:
+            st.info("Scope: every medication in the loaded session dataset. Inventory filters are not applied to ABC category totals.")
+            report = build_inventory_report(medications, "abc_summary")
 
         elif report_id == "request_statuses":
             request_filters = _request_filters()
@@ -299,7 +304,15 @@ def render_reporting_view(medications: pd.DataFrame) -> None:
 
         else:
             report = build_inventory_report(medications, report_id, filters=inventory_filters)
-            st.caption("Scope: the selected inventory report and filters. Inventory summary figures use that same selection.")
+            if report_id == "stock_analytics":
+                st.caption(
+                    "Scope: displayed rows follow the inventory filters. "
+                    "ABC classes and percentages retain the complete loaded-population denominator."
+                )
+            else:
+                st.caption(
+                    "Scope: the selected inventory report and filters. Inventory summary figures describe that selection."
+                )
 
     except ValueError as error:
         st.error(str(error))
@@ -308,8 +321,10 @@ def render_reporting_view(medications: pd.DataFrame) -> None:
     _render_report_table(report, report_id)
 
     st.info(
-        "Unavailable: inventory turnover, historical hospital stockout "
-        "or consumption trends, purchase/receiving history, supplier "
-        "performance, confirmed shrinkage, hospital cost savings "
-        "and patient outcomes."
+        "N/A: demand forecasting, calculated safety stock, optimized "
+        "reorder points, EOQ/Newsvendor recommendations, clinical VEN "
+        "classification, inventory turnover, historical hospital stockout "
+        "or consumption trends, supplier performance, confirmed shrinkage, "
+        "hospital cost savings and patient outcomes. Required historical "
+        "records, model inputs or governed definitions are unavailable."
     )

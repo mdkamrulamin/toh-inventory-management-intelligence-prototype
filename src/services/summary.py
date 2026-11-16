@@ -23,22 +23,22 @@ def summarize_inventory(medications: pd.DataFrame) -> dict[str, int | float | No
     ):
         supplier_count = int(medications["supplier"].nunique())
         
-    # Costs use a common currency, so monetary values can be summed.
-    # Physical quantities in tablets/capsules/vials are never summed together.
+    # Monetary values can be combined only when quantity/cost compatibility is established for every selected record.
     inventory_value = None
-    if (
-        "unit_cost" in medications.columns
-        and medications["unit_cost"].notna().all()
-        and sku_count
-    ):
-        calculated_value = float(
-            (
-                medications["current_stock"] * medications["unit_cost"]
-            ).sum()
-        )
+    
+    has_units = False
+    if "stock_unit" in medications.columns:
+        units = medications["stock_unit"].astype("string").str.strip()
+        has_units = bool((units.notna() & units.ne("")).fillna(False).all())
         
-        if isfinite(calculated_value):
-            inventory_value = calculated_value
+    if (sku_count and has_units and "unit_cost" in medications.columns and medications["unit_cost"].notna().all() and medications["current_stock"].notna().all()):
+        row_values = (medications["current_stock"] * medications["unit_cost"])
+        
+        if (row_values.notna().all() and row_values.map(isfinite).all()):
+            calculated_value = float(row_values.sum())
+            
+            if isfinite(calculated_value):
+                inventory_value = calculated_value
             
     return {
         "sku_count": sku_count,

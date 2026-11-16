@@ -59,8 +59,9 @@ def render_executive_view(medications: pd.DataFrame | None = None, *, summary: d
         
     st.caption(
         "Zero-stock share is a snapshot, not a stockout rate over time. "
-        "Inventory value sums recoreded stock x synthetic CAD unit cost; "
-        "the total is N/A if any unit cost is missing."
+        "Inventory value uses current session stock and synthetic CAD unit "
+        "costs. The total is N/A when required stock, cost or unit information "
+        "is unavailable, or the calculated total is nonfinite."
     )
     
     st.caption(
