@@ -3,8 +3,11 @@
 from dataclasses import dataclass, field
 from datetime import datetime, date
 from enum import StrEnum
+from decimal import Decimal
 
 import pandas as pd
+
+DEMO_SCHEMA_VERSION = 2
 
 class Role(StrEnum):
     CLINICAL = "clinical"
@@ -24,6 +27,7 @@ class RequestStatus(StrEnum):
     ESCALATED = "escalated"
     AWAITING_SUPPLY = "awaiting_supply"
     CLOSED = "closed"
+    ON_ORDER = "on_order"
     
 class Urgency(StrEnum):
     ROUTINE = "routine"
@@ -99,6 +103,66 @@ class FulfillmentRecord:
     fulfilled_by: str = "Demo user"
     fulfilled_by_role: Role = Role.WAREHOUSE
     
+class OrderStatus(StrEnum):
+    ORDERED = "ordered"
+    PARTIALLY_RECEIVED = "partially_received"
+    RECEIVED = "received"
+    CANCELLED = "cancelled"
+    
+@dataclass(frozen=True)
+class CreateOrderInput:
+    quantity: int
+    unit: str
+    expected_delivery: date | None = None
+    expected_delivery_reason: str = ""
+
+@dataclass(frozen=True)
+class OrderEvent:
+    sequence: int
+    action: str
+    from_status: OrderStatus | None
+    to_status: OrderStatus
+    reason: str
+    actor_role: Role
+    actor_name: str
+    timestamp: str
+    expected_delivery_before: str | None = None
+    expected_delivery_after: str | None = None
+    
+@dataclass(frozen=True)
+class SyntheticOrder:
+    run_id: str
+    order_id: str
+    linked_request_id: str
+    medication_id: str
+    medication_name: str
+    unit: str
+    ordered_quantity: int
+    supplier: str | None
+    unit_cost: int | float | None
+    order_value_cad: Decimal | None
+    order_value_note: str
+    lead_time_days: int | float | None
+    order_date: str
+    expected_delivery: str | None
+    expected_delivery_note: str
+    status: OrderStatus
+    status_reason: str
+    created_time: str
+    updated_time: str
+    order_key: str
+    quantity_received: int = 0
+    order_history: tuple[OrderEvent, ...] = ()
+    ordered_by: str = "Demo user"
+    ordered_by_role: Role = Role.PROCUREMENT
+    provenance: str = (
+        "Synthetic demonstration order. Not sent to any supplier."
+    )
+
+    @property
+    def quantity_outstanding(self) -> int:
+        return self.ordered_quantity - self.quantity_received
+    
 @dataclass(frozen=True)
 class SyntheticRequest:
     run_id: str
@@ -124,6 +188,7 @@ class SyntheticRequest:
     fulfillment: FulfillmentRecord | None = None
     outcome: RequestOutcome | None = None
     status_history: list[StatusEvent] = field(default_factory=list)
+    order_ids: tuple[str, ...] = ()
     
 @dataclass(frozen=True)
 class DemoState:
@@ -136,7 +201,9 @@ class DemoState:
     requests: dict[str, SyntheticRequest]
     next_request_number: int
     started_time: str
-    schema_version: int = 1
+    schema_version: int = DEMO_SCHEMA_VERSION
+    orders: dict[str, SyntheticOrder] = field(default_factory=dict)
+    next_order_number: int = 1
     
 @dataclass(frozen=True)
 class WorkflowResult:
@@ -144,3 +211,4 @@ class WorkflowResult:
     request_id: str | None
     changed: bool
     message: str
+    order_id: str | None = None

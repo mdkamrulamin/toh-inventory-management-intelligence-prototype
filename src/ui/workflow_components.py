@@ -2,6 +2,7 @@
 
 import pandas as pd
 import streamlit as st
+from src.services.order_queries import ORDER_STATUS_LABELS
 
 STATUS_LABELS = {
     "received": "Received",
@@ -12,6 +13,7 @@ STATUS_LABELS = {
     "escalated": "Escalated",
     "awaiting_supply": "Awaiting supply",
     "closed": "Closed",
+    "on_order": "On order",
 }
 
 OUTCOME_LABELS = {
@@ -192,7 +194,8 @@ def render_request_details(request: dict, *, key_prefix: str) -> None:
             f"Demo actor: {fulfillment['fulfilled_by']} | "
             f"Time (UTC): {fulfillment['fulfilled_time']}"
         )
-        
+    
+    render_order_progress(request.get("orders", []), key_prefix=f"{key_prefix}_linked_orders")    
     history = request.get("status_history", [])
     with st.expander("Synthetic status history"):
         history_rows = [
@@ -221,5 +224,62 @@ def render_request_details(request: dict, *, key_prefix: str) -> None:
             st.info("No status history is available.")
             
         st.caption("Session-only demonstration history. Actors are not authenticated professionals.")
+        
+def render_order_progress(orders: list[dict], *, key_prefix: str) -> None:
+    """Display already projected order fields without adding hidden data."""
+    if not orders:
+        return
+    st.write("**Linked simulated order progress**")
+    
+    fields = (
+        ("ordered_quantity", "Ordered quantity"),
+        ("quantity_received", "Received quantity"),
+        ("quantity_outstanding", "Outstanding quantity"),
+        ("unit", "Order stock unit"),
+        ("supplier", "Demo supplier"),
+        ("lead_time_days", "Supplied lead time (days)"),
+        ("unit_cost", "Supplied unit cost (CAD/unit)"),
+        ("order_value_cad", "Synthetic order value (CAD)"),
+    )
+    
+    for order in orders:
+        st.write(
+            f"**{order['order_id']} — {order['medication_name']}**"
+        )
+        st.write(
+            "**Order status:** "
+            f"{ORDER_STATUS_LABELS.get(order['order_status'], order['order_status'])}"
+        )
+        st.write(
+            "**Illustrative expected delivery:** "
+            f"{display_value(order.get('expected_delivery'))}"
+        )
+        st.caption(order["progress_note"])
+        
+        for field, label in fields:
+            if field not in order:
+                continue
+            
+            value = order[field]
+            if (field in {"unit_cost", "order_value_cad"} and value is not None and not pd.isna(value)):
+                text = f"{value:,.2f}"
+            else:
+                text = display_value(value)
+                
+            st.write(f"**{label}:** {text}")
+            
+        for field in {"expected_delivery_note", "order_value_note", "provenance"}:
+            if field in order:
+                st.caption(order[field])
+                
+        history = order.get("order_history")
+        if history:
+            with st.expander(f"Simulated order history — {order['order_id']}"):
+                history_table = pd.DataFrame(history)
+                history_table = history_table.astype("object").where(history_table.notna(), "N/A")
+                render_workflow_table(history_table, table_key=(f"{key_prefix}_{order['order_id']}_history"))
+                
+            
+            
             
     

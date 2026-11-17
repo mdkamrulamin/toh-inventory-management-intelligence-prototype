@@ -11,6 +11,7 @@ from src.ui.components import (
 )
 from src.ui.handoff_panels import render_warehouse_handoffs
 from src.ui.stock_indicators import render_stock_review_legend
+from src.ui.order_panels import render_warehouse_orders
 
 def render_warehouse_view(medications: pd.DataFrame) -> None:
         """Show Warehouse handoffs and current session inventory."""
@@ -20,6 +21,7 @@ def render_warehouse_view(medications: pd.DataFrame) -> None:
         )
         
         render_warehouse_handoffs()
+        render_warehouse_orders()
         
         warehouse_columns = [
             "medication_id",

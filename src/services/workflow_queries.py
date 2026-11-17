@@ -21,6 +21,7 @@ from src.services.workflow_models import (
     Urgency,
     WorkflowError,
 )
+from src.services.order_queries import get_order_details
 
 INVENTORY_COLUMNS = (
     "medication_id",
@@ -92,6 +93,7 @@ ACTIONABLE_STATUSES = {
         RequestStatus.UNDER_REVIEW,
         RequestStatus.APPROVED_FOR_RELEASE,
         RequestStatus.AWAITING_SUPPLY,
+        RequestStatus.ON_ORDER,
     },
     Role.WAREHOUSE: {
         RequestStatus.APPROVED_FOR_RELEASE,
@@ -99,6 +101,7 @@ ACTIONABLE_STATUSES = {
     Role.PROCUREMENT: {
         RequestStatus.ESCALATED,
         RequestStatus.AWAITING_SUPPLY,
+        RequestStatus.ON_ORDER,
     },
     Role.REPORTING: set(),
 }
@@ -145,7 +148,7 @@ def _visible(request: SyntheticRequest, role: Role) -> bool:
         )
     return False
 
-def _project_request(request: SyntheticRequest, role: Role, *, include_history: bool) -> dict:
+def _project_request(state: DemoState, request: SyntheticRequest, role: Role, *, include_history: bool) -> dict:
     # Explicit fields prevent internal submission tokens or unrelated future fields from leaking into role outputs.
     result = {
         "run_id": request.run_id,
@@ -217,6 +220,15 @@ def _project_request(request: SyntheticRequest, role: Role, *, include_history: 
             }
             for event in request.status_history
         ]
+        
+    if request.order_ids:
+        result["order_ids"] = list(request.order_ids)
+        
+        if role in {Role.CLINICAL, Role.PHARMACIST, Role.PROCUREMENT, Role.WAREHOUSE}:
+            result["orders"] = [
+                get_order_details(state, order_id, role, include_history=include_history)
+                for order_id in request.order_ids
+            ]
     
     return deepcopy(result)
 
@@ -263,7 +275,7 @@ def list_requests(state: DemoState, role: Role | str, *, actionable_only: bool =
     )
     
     return [
-        _project_request(request, role, include_history=False)
+        _project_request(state, request, role, include_history=False)
         for request in requests
     ]
     
@@ -277,7 +289,7 @@ def get_request_details(state: DemoState, request_id: str, role: Role | str) -> 
     if not _visible(request, role):
         raise WorkflowError("request_not_visible", "This request has not been handed to this role.")
     
-    return _project_request(request, role, include_history=True)
+    return _project_request(state, request, role, include_history=True)
 
 def get_current_availability(state: DemoState, request_id: str) -> dict: 
     """Compare with current stock without reserving or changing it."""
@@ -347,6 +359,7 @@ def get_session_request_summary(state: DemoState) -> dict:
         RequestStatus.APPROVED_FOR_RELEASE,
         RequestStatus.ESCALATED,
         RequestStatus.AWAITING_SUPPLY,
+        RequestStatus.ON_ORDER,
     }
     return {
         "total_requests": len(state.requests),

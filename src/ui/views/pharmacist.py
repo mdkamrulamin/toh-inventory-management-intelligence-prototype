@@ -129,7 +129,7 @@ def _render_review_actions(request: dict, availability: dict) -> None:
         )
         return
     
-    if status not in {"under_review", "approved_for_release", "awaiting_supply"}:
+    if status not in {"under_review", "approved_for_release", "awaiting_supply", "on_order"}:
         if status == "escalated":
             st.info("Shortage routed to Procurement. The shared request will show any later supply feedback.")
         else:
@@ -204,8 +204,12 @@ def _render_review_actions(request: dict, availability: dict) -> None:
             "recall_release",
             disabled=not has_reason,
         )
-    elif status == "awaiting_supply":
-        st.warning("Supply feedback is informational. Closing here records closure without supply.")
+    elif status in {"awaiting_supply", "on_order"}:
+        st.warning(
+            "Closing records a request outcome without fulfillment. "
+            "It does not cancel an open simulated order; that order "
+            "may continue as replenishment."
+        )
         action_button(
             "Close demo request without supply",
             "close_without_supply",

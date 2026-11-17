@@ -20,6 +20,7 @@ from src.ui.workflow_components import (
     render_request_table,
     select_request,
 )
+from src.ui.order_panels import render_order_creation
 
 def render_warehouse_handoffs() -> None:
     """Show released requests and deliberate full-quantity fulfillment."""
@@ -109,8 +110,9 @@ def render_procurement_handoffs(medications: pd.DataFrame) -> None:
     st.subheader("Linked shortage reviews")
     st.caption(
         "These items come from explicit Pharmacist escalation. "
-        "Routine stock monitoring below works independently. "
-        "Neither route creates a purchase order."
+        "Routine inventory monitoring remains independent. "
+        "Supply feedback is informational; an eligible request "
+        "requires separate simulated-order confirmation."
     )
     include_history = st.checkbox("Include previous Procurement handoffs", key="workflow_ui_procurement_include_history")
     
@@ -206,3 +208,5 @@ def render_procurement_handoffs(medications: pd.DataFrame) -> None:
                 "expected_revision": info.revision,
             },
         )
+        
+    render_order_creation(request)

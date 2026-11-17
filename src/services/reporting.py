@@ -545,6 +545,7 @@ def prepare_report_display(report: pd.DataFrame) -> pd.DataFrame:
     # Round only the display/export copy. ABC decisions remain unrounded.
     for column in (
         "unit_cost",
+        "order_value_cad",
         "monthly_consumption_value_cad",
         "recorded_inventory_value_cad",
         "total_monthly_consumption_value_cad",

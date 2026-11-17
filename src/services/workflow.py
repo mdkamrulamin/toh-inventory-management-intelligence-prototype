@@ -543,7 +543,16 @@ def fulfill_request(state, request_id, context) -> WorkflowResult:
 
 
 def close_without_supply(state, request_id, reason, context) -> WorkflowResult:
-    request, stamp = _prepare(state, request_id, context, Role.PHARMACIST, {RequestStatus.AWAITING_SUPPLY})
+    request, stamp = _prepare(
+        state, 
+        request_id, 
+        context, 
+        Role.PHARMACIST, 
+        {
+            RequestStatus.AWAITING_SUPPLY,
+            RequestStatus.ON_ORDER,
+        },
+    )
 
     updated = _event(
         request,

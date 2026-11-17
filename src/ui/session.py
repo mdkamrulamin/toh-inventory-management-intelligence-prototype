@@ -18,7 +18,10 @@ from src.config import SAMPLE_MEDICATIONS_PATH
 from src.data.loader import load_medications
 from src.services import workflow as wf
 from src.services import workflow_queries as queries
+from src.services import orders as order_services
+from src.services import order_queries
 from src.services.workflow_models import (
+    DEMO_SCHEMA_VERSION,
     ActionContext,
     DemoState,
     Role,
@@ -46,6 +49,9 @@ _ACTIONS = {
     "update_supply_feedback": wf.update_supply_feedback,
     "fulfill_request": wf.fulfill_request,
     "close_without_supply": wf.close_without_supply,
+    "confirm_order": order_services.confirm_order,
+    "update_order_delivery": order_services.update_order_delivery,
+    "cancel_order": order_services.cancel_order,
 }
 
 @dataclass(frozen=True)
@@ -66,7 +72,7 @@ def _now(value: datetime | None) -> datetime:
 def _current(store: MutableMapping) -> DemoState:
     state = store.get(STATE_KEY)
     
-    if (not isinstance(state, DemoState) or state.schema_version != 1):
+    if (not isinstance(state, DemoState) or state.schema_version != DEMO_SCHEMA_VERSION):
         raise WorkflowError("invalid_state", "No compatible active demo exists. Start a new demo with the configured dataset.")
     
     return state
@@ -283,6 +289,35 @@ def read_request_summary(*, state_store: MutableMapping | None = None) -> dict:
 
 def read_replenishment_review(*, state_store: MutableMapping | None = None):
     return queries.get_replenishment_review(_current(_store(state_store)))
+
+def preview_simulated_order(
+    request_id: str,
+    inputs,
+    *,
+    expected_run_id: str,
+    expected_revision: int,
+    source_path: str | Path = SAMPLE_MEDICATIONS_PATH,
+    state_store: MutableMapping | None = None,
+    now: datetime | None = None,
+) -> dict:
+    """Preview against current session/source state without publishing changes."""
+    state = _current(_store(state_store))
+    _check_source(state, source_path)
+    
+    context = ActionContext(
+        acting_role=Role.PROCUREMENT,
+        expected_run_id=expected_run_id,
+        expected_revision=expected_revision,
+        now=_now(now)
+    )
+    preview = order_services.preview_order(state, request_id, inputs, context)
+    return deepcopy({**preview, "run_id": state.run_id, "revision": state.revision})
+
+def read_orders(role: Role | str, *, open_only: bool = False, state_store: MutableMapping | None = None) -> list[dict]:
+    return order_queries.list_orders(_current(_store(state_store)), role, open_only=open_only)
+
+def read_order_details(order_id: str, role: Role | str, *, state_store: MutableMapping | None = None) -> dict:
+    return order_queries.get_order_details(_current(_store(state_store)), order_id, role)
  
         
 

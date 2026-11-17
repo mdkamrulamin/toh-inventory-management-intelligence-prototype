@@ -17,6 +17,7 @@ from src.ui.components import (
 )
 from src.ui.handoff_panels import render_procurement_handoffs
 from src.ui.stock_indicators import render_stock_review_legend
+from src.ui.order_panels import render_procurement_orders
 
 def render_procurement_inventory_view(medications: pd.DataFrame) -> None:
     """Show linked shortages and supported synthetic stock analytics."""
@@ -26,6 +27,7 @@ def render_procurement_inventory_view(medications: pd.DataFrame) -> None:
     )
     
     render_procurement_handoffs(medications)
+    render_procurement_orders()
     
     st.subheader("Routine inventory monitoring")
     st.caption(
