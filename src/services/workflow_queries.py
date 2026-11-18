@@ -94,6 +94,7 @@ ACTIONABLE_STATUSES = {
         RequestStatus.APPROVED_FOR_RELEASE,
         RequestStatus.AWAITING_SUPPLY,
         RequestStatus.ON_ORDER,
+        RequestStatus.SUPPLY_RECEIVED,
     },
     Role.WAREHOUSE: {
         RequestStatus.APPROVED_FOR_RELEASE,
@@ -229,6 +230,13 @@ def _project_request(state: DemoState, request: SyntheticRequest, role: Role, *,
                 get_order_details(state, order_id, role, include_history=include_history)
                 for order_id in request.order_ids
             ]
+            
+    if role == Role.PHARMACIST:
+        result["after_receipt"] = request.after_receipt
+        result["has_open_order"] = any(
+            order["order_status"] in {"ordered", "partially_received"}
+            for order in result.get("orders", [])
+        )
     
     return deepcopy(result)
 
@@ -360,6 +368,7 @@ def get_session_request_summary(state: DemoState) -> dict:
         RequestStatus.ESCALATED,
         RequestStatus.AWAITING_SUPPLY,
         RequestStatus.ON_ORDER,
+        RequestStatus.SUPPLY_RECEIVED,
     }
     return {
         "total_requests": len(state.requests),

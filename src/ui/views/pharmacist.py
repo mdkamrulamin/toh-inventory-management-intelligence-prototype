@@ -85,11 +85,10 @@ def _render_stock_context(medications: pd.DataFrame, request: dict) -> dict:
 
 @st.fragment
 def _render_review_actions(request: dict, availability: dict) -> None:
-    """Offer only actions relevant to the request's current status."""
+    """Offer initial and post-receipt actions through shared services."""
     info = get_session_info()
-    # A successful workflow action changes the business revision.
-    # Refresh the full app then, so queues, details and other views
-    # receive the updated state. Typing alone does not change revision.
+    # Typing reruns this fragment only. A business change refreshes the full application so all role views use the new shared state.
+    
     if (info.run_id != request["run_id"] or info.revision != availability["revision"]):
         st.rerun()
         
@@ -107,13 +106,22 @@ def _render_review_actions(request: dict, availability: dict) -> None:
     
     status = request["status"]
     request_id = request["request_id"]
+    after_receipt = request.get("after_receipt", False)
+    has_open_order = request.get("has_open_order", False)
     
     st.subheader("Synthetic review actions")
     st.caption("Actions are recorded as Demo user. They are not real pharmacist authorization.")
     
-    if status == "received":
+    if status in {"received", "supply_received"}:
+        if status == "supply_received":
+            st.info("Supply has been recorded. Start an explicit post-receipt review before releasing this request.")
+        
         st.button(
-            "Start demo review",
+            (
+                "Start post-receipt demo review"
+                if status == "supply_received"
+                else "Start demo review"
+            ),
             key=(
                 f"workflow_action_start_review_"
                 f"{info.run_id}_{request_id}"
@@ -126,26 +134,29 @@ def _render_review_actions(request: dict, availability: dict) -> None:
                 "expected_run_id": info.run_id,
                 "expected_revision": info.revision,
             },
-        )
-        return
-    
-    if status not in {"under_review", "approved_for_release", "awaiting_supply", "on_order"}:
+        )   
+        if status == "received":
+            return 
+        
+    if status not in {"under_review", "approved_for_release", "awaiting_supply", "on_order", "supply_received"}:
         if status == "escalated":
-            st.info("Shortage routed to Procurement. The shared request will show any later supply feedback.")
+            st.info("Shortage routed to Procurement. The shared request will show later supply progress.")
         else:
             st.info("No Pharmacist action is available for this status.")
         return
     
-    reason_key = (f"workflow_ui_pharmacist_reason_{info.run_id}_{request_id}")
+    reason_key = (
+        f"workflow_ui_pharmacist_reason_"
+        f"{info.run_id}_{request_id}"
+    )
     reason = st.text_input(
         "Demo decision reason",
         key=reason_key,
         live="0ms",
         placeholder="Enter a reason for this demo decision",
         help=(
-            "Required for release, final return, shortage escalation, "
-            "recall and closure. Optional when returning to the queue. "
-            "Do not enter patient information."
+            "Required for release, final return, shortage escalation, return to On order, recall and closure. "
+            "Optional when returning to the review queue. Do not enter patient information."
         ),
     )
     has_reason = bool((reason or "").strip())
@@ -170,7 +181,11 @@ def _render_review_actions(request: dict, availability: dict) -> None:
     
     if status == "under_review":
         can_release = (availability["comparable"] and availability["available"] is True)
-        can_escalate = (availability["comparable"] and availability["available"] is False)
+        has_shortage = (availability["comparable"] and availability["available"] is False)
+        
+        if after_receipt:
+            st.caption("Post-receipt review: live stock is checked again. A receipt does not itself authorize release.")
+
         release_column, shortage_column = st.columns(2)
         with release_column:
             action_button(
@@ -179,36 +194,47 @@ def _render_review_actions(request: dict, availability: dict) -> None:
                 disabled=not (has_reason and can_release),
             )
         with shortage_column:
-            action_button(
-                "Confirm shortage and route to Procurement",
-                "escalate_shortage",
-                disabled=not (has_reason and can_escalate),
-            )
+            if after_receipt and has_open_order:
+                action_button(
+                    "Return to On order",
+                    "return_to_on_order",
+                    disabled=not (has_reason and has_shortage),
+                )
+                st.caption("Use the existing order when stock is insufficient and supply remains outstanding.")
+            else:
+                action_button(
+                    "Confirm shortage and route to Procurement",
+                    "escalate_shortage",
+                    disabled=not (has_reason and has_shortage and not has_open_order),
+                )
             
         return_column, queue_column = st.columns(2)
         with return_column:
             action_button(
                 "Return request with reason — final",
                 "return_request",
-                disabled=not has_reason,
+                disabled=after_receipt or not has_reason,
             )
         with queue_column:
             action_button("Return to review queue", "return_to_queue")
             
-        st.caption("Release and escalation recheck current stock in the shared service. Neither action changes inventory quantities.")
+        if after_receipt:
+            st.caption("Final return to the requester is unavailable after receipt. Returning to the queue retains Supply received context.")
+            
+            
+        st.caption("Review actions do not reserve or change stock. Warehouse fulfillment checks the latest quantity again.")
         
     elif status == "approved_for_release":
-        st.info("Eligible for Warehouse demo fulfillment. Release authorization has not deducted or reserved stock.")
+        st.info("Eligible for Warehouse demo fulfillment. Release has not deducted or reserved stock.")
         action_button(
             "Recall demo release for review",
             "recall_release",
             disabled=not has_reason,
         )
-    elif status in {"awaiting_supply", "on_order"}:
+    if (status in {"awaiting_supply", "on_order", "supply_received"} or (status == "under_review" and after_receipt)):
         st.warning(
-            "Closing records a request outcome without fulfillment. "
-            "It does not cancel an open simulated order; that order "
-            "may continue as replenishment."
+            "Closing records a request outcome without fulfillment. It does not cancel an open simulated order. "
+            "Later receipts may still replenish inventory without reopening this request."
         )
         action_button(
             "Close demo request without supply",

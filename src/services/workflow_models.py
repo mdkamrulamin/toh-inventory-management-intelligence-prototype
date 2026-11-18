@@ -7,7 +7,7 @@ from decimal import Decimal
 
 import pandas as pd
 
-DEMO_SCHEMA_VERSION = 2
+DEMO_SCHEMA_VERSION = 3
 
 class Role(StrEnum):
     CLINICAL = "clinical"
@@ -28,6 +28,7 @@ class RequestStatus(StrEnum):
     AWAITING_SUPPLY = "awaiting_supply"
     CLOSED = "closed"
     ON_ORDER = "on_order"
+    SUPPLY_RECEIVED = "supply_received"
     
 class Urgency(StrEnum):
     ROUTINE = "routine"
@@ -189,6 +190,34 @@ class SyntheticRequest:
     outcome: RequestOutcome | None = None
     status_history: list[StatusEvent] = field(default_factory=list)
     order_ids: tuple[str, ...] = ()
+    after_receipt: bool = False
+    
+@dataclass(frozen=True)
+class ReceiptInput:
+    quantity: int
+    unit: str
+    
+@dataclass(frozen=True)
+class ReceiptRecord:
+    run_id: str
+    receipt_id: str
+    order_id: str
+    linked_request_id: str
+    medication_id: str
+    unit: str
+    received_quantity: int
+    stock_before: int | float
+    stock_after: int | float
+    received_time: str
+    receipt_key: str
+    recorded_by: str = "Demo user"
+    recorded_by_role: Role = Role.WAREHOUSE
+    status: str = "posted"
+    inventory_added: bool = True
+    provenance: str = (
+        "Synthetic demonstration receipt. No physical shipment is verified."
+    )
+    
     
 @dataclass(frozen=True)
 class DemoState:
@@ -204,6 +233,8 @@ class DemoState:
     schema_version: int = DEMO_SCHEMA_VERSION
     orders: dict[str, SyntheticOrder] = field(default_factory=dict)
     next_order_number: int = 1
+    receipts: dict[str, ReceiptRecord] = field(default_factory=dict)
+    next_receipt_number: int = 1
     
 @dataclass(frozen=True)
 class WorkflowResult:
@@ -212,3 +243,4 @@ class WorkflowResult:
     changed: bool
     message: str
     order_id: str | None = None
+    receipt_id: str | None = None

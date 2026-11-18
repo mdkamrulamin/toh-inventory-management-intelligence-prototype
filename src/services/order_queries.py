@@ -4,6 +4,7 @@ from copy import deepcopy
 from src.services import workflow as wf
 from src.services.orders import OPEN_ORDER_STATUSES
 from src.services.workflow_models import Role, WorkflowError
+from src.services.receipt_queries import list_receipts
 
 ORDER_READER_ROLES = {
     Role.CLINICAL,
@@ -23,6 +24,7 @@ PUBLIC_EVENT_REASONS = {
     "confirm_order": "Simulated order confirmed.",
     "update_order_delivery": "Illustrative expected delivery updated.",
     "cancel_order": "Simulated order cancelled.",
+    "post_receipt": "Synthetic receipt posted.",
 }
 
 PROGRESS_NOTES = {
@@ -122,6 +124,20 @@ def get_order_details(state, order_id, role, *, include_history=True) -> dict:
             }
             for event in order.order_history
         ]
+        
+    receipts = list_receipts(state, role, order_id=order.order_id)
+    result["receipt_ids"] = [
+        receipt["receipt_id"]
+        for receipt in receipts
+    ]
+    
+    if include_history:
+        result["receipts"] = receipts
+        
+    if request.status == "supply_received":
+        result["progress_note"] = "Synthetic supply received. An explicit Pharmacist review is required before any release or fulfillment."
+    elif (request.status == "under_review" and request.after_receipt):
+        result["progress_note"] = "An explicit synthetic post-receipt review is in progress. No stock has been reserved by that review."
         
     # Never expose the internal confirmation key.
     return deepcopy(result)

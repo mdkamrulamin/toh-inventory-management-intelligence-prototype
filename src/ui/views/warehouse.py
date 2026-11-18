@@ -96,7 +96,7 @@ def render_warehouse_view(medications: pd.DataFrame) -> None:
         st.caption(
             "Counted quantities are past synthetic observations. The full "
             "transaction history since each count is unavailable. Current "
-            "session fulfillment does not establish physical stock accuracy, "
+            "session receipts and fulfillment do not establish physical stock accuracy, "
             "loss or shrinkage."        
         )
         
@@ -115,15 +115,17 @@ def render_warehouse_view(medications: pd.DataFrame) -> None:
         )
         
         render_feature_placeholder(
-            "Receiving and physical picking",
-            "Receiving checks, physical picking and dispatch confirmation "
-            "remain outside this synthetic fulfillment demonstration.",
+            "Physical receiving and picking checks",
+            "Synthetic order-linked receipt posting is implemented. "
+            "Physical inspection, quarantine, batch capture, putaway, "
+            "picking and dispatch verification remain outside this demo.",
         )
         
         render_feature_placeholder(
             "Stock movement and reconciliation",
-            "Only request-linked synthetic fulfillment is recorded in this "
-            "session. Physical receipts, transfers and count reconciliation "
+            "This session records order-linked synthetic receipts "
+            "and request-linked fulfillment. Transfers, a complete "
+            "historical ledger and physical count reconciliation "
             "require additional records and agreed workflows.",
         )
         

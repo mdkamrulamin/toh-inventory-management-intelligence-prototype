@@ -32,6 +32,7 @@ PHARMACIST_ACTIONS = {
     "recall_release",
     "escalate_shortage",
     "close_without_supply",
+    "return_to_on_order",
 }
 
 def _store(state_store: MutableMapping | None = None) -> MutableMapping:

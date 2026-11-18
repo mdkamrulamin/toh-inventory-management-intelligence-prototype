@@ -28,6 +28,8 @@ from src.services.workflow_models import (
     WorkflowError,
     WorkflowResult,
 )
+from src.services import receipts as receipt_services
+from src.services import receipt_queries
 
 STATE_KEY = "demo_state"
 NOTICE_KEY = "workflow_notice"
@@ -52,6 +54,8 @@ _ACTIONS = {
     "confirm_order": order_services.confirm_order,
     "update_order_delivery": order_services.update_order_delivery,
     "cancel_order": order_services.cancel_order,
+    "confirm_receipt": receipt_services.confirm_receipt,
+    "return_to_on_order": wf.return_to_on_order,
 }
 
 @dataclass(frozen=True)
@@ -319,6 +323,41 @@ def read_orders(role: Role | str, *, open_only: bool = False, state_store: Mutab
 def read_order_details(order_id: str, role: Role | str, *, state_store: MutableMapping | None = None) -> dict:
     return order_queries.get_order_details(_current(_store(state_store)), order_id, role)
  
-        
+def preview_simulated_receipt(
+    order_id: str,
+    inputs,
+    *,
+    expected_run_id: str,
+    expected_revision: int,
+    source_path: str | Path = SAMPLE_MEDICATIONS_PATH,
+    state_store: MutableMapping | None = None,
+    now: datetime | None = None,
+) -> dict:
+    """Preview a Warehouse receipt without publishing any changes."""
+    state = _current(_store(state_store))
+    _check_source(state, source_path)
+    
+    context = ActionContext(
+        acting_role=Role.WAREHOUSE,
+        expected_run_id=expected_run_id,
+        expected_revision=expected_revision,
+        now=_now(now),
+    )
+    
+    preview = receipt_services.preview_receipt(state, order_id, inputs, context)
+    
+    return deepcopy(
+        {
+            **preview,
+            "run_id": state.run_id,
+            "revision": state.revision,
+        }
+    )
 
+def read_receipts(role: Role | str, *, order_id: str | None = None, state_store: MutableMapping | None = None) -> list[dict]:
+    """Read detached receipt records through the role boundary."""
+    return receipt_queries.list_receipts(_current(_store(state_store)), role, order_id=order_id)
 
+def read_receipt_details(receipt_id: str, role: Role | str, *, state_store: MutableMapping | None = None) -> dict:
+    """Read one detached, role-projected receipt record."""
+    return receipt_queries.get_receipt_details(_current(_store(state_store)), receipt_id, role)

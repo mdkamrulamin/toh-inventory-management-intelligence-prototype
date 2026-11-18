@@ -27,6 +27,7 @@ from src.services.workflow_models import (
     SupplyFeedbackInput,
     SyntheticRequest,
     Urgency,
+    OrderStatus,
     WorkflowError,
     WorkflowResult,
 )
@@ -342,13 +343,53 @@ def submit_request(state: DemoState, inputs: SubmitRequestInput, submission_key:
         f"Synthetic request {request_id} submitted.",
         next_request_number=state.next_request_number + 1,
     )
+
+def _open_linked_orders(state: DemoState, request: SyntheticRequest) -> tuple:
+    """Find this request's current open orders in shared state."""
+    open_statuses = {
+        OrderStatus.ORDERED,
+        OrderStatus.PARTIALLY_RECEIVED,
+    }
+    linked_orders = []
+    for order_id, order in state.orders.items():
+        if (order.linked_request_id != request.request_id or order.status not in open_statuses):
+            continue
+        if (
+            order.run_id != state.run_id
+            or order.order_id != order_id
+            or order_id not in request.order_ids
+            or order.medication_id != request.medication_id
+            or order.unit != request.unit
+        ):
+            raise WorkflowError("invalid_state", "The linked open order is inconsistent with the request.")
+        linked_orders.append(order)
+    
+    if len(linked_orders) > 1:
+        raise WorkflowError("invalid_state", "A request cannot have multiple open simulated orders.")
+    
+    return tuple(linked_orders)
+    
     
 def start_review(state, request_id, context) -> WorkflowResult:
-    request, stamp = _prepare(state, request_id, context, Role.PHARMACIST, {RequestStatus.RECEIVED})
-    updated = _event(request, RequestStatus.UNDER_REVIEW, "start_review", "Synthetic review started.", Role.PHARMACIST, stamp)
+    """Start an initial review or an explicit post-receipt review."""
+    request, stamp = _prepare(state, request_id, context, Role.PHARMACIST, {RequestStatus.RECEIVED, RequestStatus.SUPPLY_RECEIVED})
+    after_receipt = (request.status == RequestStatus.SUPPLY_RECEIVED)
+    updated = _event(
+        request, 
+        RequestStatus.UNDER_REVIEW, 
+        "start_review", 
+        (
+            "Synthetic post-receipt review started."
+            if after_receipt else "Synthetic review started."
+        ), 
+        Role.PHARMACIST, 
+        stamp,
+        after_receipt=after_receipt,
+    )
     return _publish(state, updated, "Review started.")
 
 def return_to_queue(state, request_id, note, context) -> WorkflowResult:
+    """Return to the appropriate queue without losing review context."""
     request, stamp = _prepare(state, request_id, context, Role.PHARMACIST, {RequestStatus.UNDER_REVIEW})
     reason = (
         "Returned to review queue."
@@ -356,11 +397,20 @@ def return_to_queue(state, request_id, note, context) -> WorkflowResult:
         or (isinstance(note, str) and not note.strip())
         else _reason(note)
     )
-    updated = _event(request, RequestStatus.RECEIVED, "return_to_queue", reason, Role.PHARMACIST, stamp)
+    target_status = (
+        RequestStatus.SUPPLY_RECEIVED
+        if request.after_receipt else RequestStatus.RECEIVED
+    )
+    updated = _event(request, target_status, "return_to_queue", reason, Role.PHARMACIST, stamp)
     return _publish(state, updated, "Request returned to the queue.")
 
 def return_request(state, request_id, reason, context) -> WorkflowResult:
+    """Allow final return during initial review only."""
     request, stamp = _prepare(state, request_id, context, Role.PHARMACIST, {RequestStatus.UNDER_REVIEW})
+    
+    if request.after_receipt:
+        raise WorkflowError("invalid_transition", "A post-receipt review cannot return the request to the requester. Use the appropriate review, supply-routing or closure action.")
+    
     updated = _event(
         request, 
         RequestStatus.RETURNED, 
@@ -388,12 +438,17 @@ def recall_release(state, request_id, reason, context) -> WorkflowResult:
     return _publish(state, updated, "Release recalled for Pharmacist review.")
 
 def escalate_shortage(state, request_id, reason, context) -> WorkflowResult:
+    """Escalate a shortage only when no linked order remains open."""
     request, stamp = _prepare(state, request_id, context, Role.PHARMACIST, {RequestStatus.UNDER_REVIEW})
     reason = _reason(reason)
     _, quantity, _, stock = _available(state, request)
     
     if quantity <= stock:
-            raise WorkflowError("invalid_transition", "Current stock covers the full request.")
+        raise WorkflowError("invalid_transition", "Current stock covers the full request.")
+    
+    if _open_linked_orders(state, request):
+        raise WorkflowError("open_order_exists", "This request already has an open simulated order. Use Return to On order during post-receipt review.")
+        
     updated = _event(
         request, 
         RequestStatus.ESCALATED, 
@@ -402,8 +457,37 @@ def escalate_shortage(state, request_id, reason, context) -> WorkflowResult:
         Role.PHARMACIST, 
         stamp, 
         shortfall=quantity - stock,
+        after_receipt=False,
     )
     return _publish(state, updated, "Shortage linked to Procurement; no stock change.")
+
+def return_to_on_order(state, request_id, reason, context) -> WorkflowResult:
+    """Wait for outstanding supply after an explicit post-receipt review."""
+    request, stamp = _prepare(state, request_id, context, Role.PHARMACIST, {RequestStatus.UNDER_REVIEW})
+    reason = _reason(reason)
+    if not request.after_receipt:
+        raise WorkflowError("invalid_transition", "Return to On order requires a post-receipt review.")
+    
+    _, quantity, _, stock = _available(state, request)
+    
+    if quantity <= stock:
+        raise WorkflowError("invalid_transition", "Current stock covers the full request.")
+    
+    if not _open_linked_orders(state, request):
+        raise WorkflowError("invalid_transition", "No linked open order remains. Use shortage escalation if further supply review is needed.")
+    
+    updated = _event(
+        request,
+        RequestStatus.ON_ORDER,
+        "return_to_on_order",
+        reason,
+        Role.PHARMACIST,
+        stamp,
+        shortfall=quantity - stock,
+        after_receipt=False,
+    )
+    
+    return _publish(state, updated, "Request returned to its existing open order; stock is unchanged.")
 
 def update_supply_feedback(state, request_id, inputs: SupplyFeedbackInput, context) -> WorkflowResult:
     request, stamp = _prepare(
@@ -527,6 +611,7 @@ def fulfill_request(state, request_id, context) -> WorkflowResult:
         stamp,
         fulfillment=fulfillment,
         outcome=RequestOutcome.FULFILLED,
+        after_receipt=False,
     )
 
     closed = _event(
@@ -543,6 +628,7 @@ def fulfill_request(state, request_id, context) -> WorkflowResult:
 
 
 def close_without_supply(state, request_id, reason, context) -> WorkflowResult:
+    """Close without fulfilling; linked orders remain independent."""
     request, stamp = _prepare(
         state, 
         request_id, 
@@ -551,8 +637,13 @@ def close_without_supply(state, request_id, reason, context) -> WorkflowResult:
         {
             RequestStatus.AWAITING_SUPPLY,
             RequestStatus.ON_ORDER,
+            RequestStatus.SUPPLY_RECEIVED,
+            RequestStatus.UNDER_REVIEW,
         },
     )
+    
+    if (request.status == RequestStatus.UNDER_REVIEW and not request.after_receipt):
+        raise WorkflowError("invalid_transition", "Closure from Under review requires a post-receipt review.")
 
     updated = _event(
         request,
@@ -562,9 +653,10 @@ def close_without_supply(state, request_id, reason, context) -> WorkflowResult:
         Role.PHARMACIST,
         stamp,
         outcome=RequestOutcome.CLOSED_WITHOUT_SUPPLY,
+        after_receipt=False,
     )
 
-    return _publish(state, updated, "Closed without supply; stock is unchanged.")
+    return _publish(state, updated, "Closed without fulfillment; stock and linked orders are unchanged.")
 
 
 def reset_demo(state: DemoState, *, now: datetime,) -> DemoState:

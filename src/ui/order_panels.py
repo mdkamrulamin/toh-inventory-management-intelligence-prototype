@@ -25,6 +25,7 @@ from src.ui.workflow_components import (
     render_order_progress,
     render_workflow_table,
 )
+from src.ui.receipt_panels import render_receipt_creation
 
 def _money(value):
     return "N/A" if value is None else f"{value:,.2f}"
@@ -327,15 +328,25 @@ def render_procurement_orders() -> None:
         )
         
 def render_warehouse_orders() -> None:
-    """Show role-permitted expected deliveries and retained order history."""
+    """Show expected supply, receipt history and eligible receipt controls."""
     st.subheader("Expected synthetic deliveries")
     st.caption(
-        "Expected dates are illustrative. An order record alone does not increase recorded stock."
+        "Expected dates are illustrative. Creating an order does not increase stock. "
+        "Only an explicitly confirmed synthetic receipt adds to active session inventory."
     )
     
     order = _select_order(Role.WAREHOUSE, "warehouse_order")
-    if order is not None:
-        render_order_progress([order], key_prefix="warehouse_expected_order")
+    
+    if order is None:
+        st.caption(
+            "Select an order above. Enable 'Include received and cancelled orders'" 
+            " to inspect completed order and receipt history."
+        )
+        return
+        
+    
+    render_order_progress([order], key_prefix="warehouse_expected_order")
+    render_receipt_creation(order)
     
         
     

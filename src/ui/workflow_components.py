@@ -14,12 +14,13 @@ STATUS_LABELS = {
     "awaiting_supply": "Awaiting supply",
     "closed": "Closed",
     "on_order": "On order",
+    "supply_received": "Supply received",
 }
 
 OUTCOME_LABELS = {
     "returned": "Returned without fulfillment",
     "fulfilled": "Synthetic fulfillment recorded",
-    "closed_without_supply": "Closed without supply",
+    "closed_without_supply": "Closed without fulfillment",
 }
 
 ROLE_LABELS = {
@@ -225,6 +226,46 @@ def render_request_details(request: dict, *, key_prefix: str) -> None:
             
         st.caption("Session-only demonstration history. Actors are not authenticated professionals.")
         
+def render_receipt_history(receipts: list[dict], *, table_key: str) -> None:
+    """Render only receipt fields supplied by the role-specific reader."""
+    if not receipts:
+        return
+    
+    rows = []
+    
+    optional_fields = (
+        ("received_quantity", "Received quantity"),
+        ("unit", "Stock unit"),
+        ("stock_before", "Recorded stock before receipt"),
+        ("stock_after", "Recorded stock after receipt"),
+        ("recorded_by", "Demo actor"),
+    )
+    
+    for receipt in receipts:
+        row = {
+            "Receipt ID": receipt["receipt_id"],
+            "Order ID": receipt["order_id"],
+            "Linked request ID": receipt["linked_request_id"],
+            "Medication ID": receipt["medication_id"],
+            "Receipt status": receipt["receipt_status"].capitalize(),
+            "Received time (UTC)": receipt["received_time"],
+        }
+        
+        for field, label in optional_fields:
+            if field in receipt:
+                row[label] = receipt[field]
+                
+        row["Demo run ID"] = receipt["run_id"]
+        rows.append(row)
+        
+    st.write("**Recorded synthetic receipts**")
+    render_workflow_table(pd.DataFrame(rows), table_key=table_key)
+    st.caption(
+        "Receipt records are session-only observations. Where shown, before/after quantities describe "
+        "the posting time, not necessarily the latest stock."
+    )
+    
+        
 def render_order_progress(orders: list[dict], *, key_prefix: str) -> None:
     """Display already projected order fields without adding hidden data."""
     if not orders:
@@ -271,7 +312,13 @@ def render_order_progress(orders: list[dict], *, key_prefix: str) -> None:
         for field in {"expected_delivery_note", "order_value_note", "provenance"}:
             if field in order:
                 st.caption(order[field])
-                
+        
+        render_receipt_history(
+            order.get("receipts", []),
+            table_key=(
+                f"{key_prefix}_{order['order_id']}_receipts"
+            ),
+        )        
         history = order.get("order_history")
         if history:
             with st.expander(f"Simulated order history — {order['order_id']}"):
