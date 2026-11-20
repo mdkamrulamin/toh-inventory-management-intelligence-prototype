@@ -3,8 +3,43 @@
 from dataclasses import dataclass
 from math import isfinite
 from numbers import Integral, Real
+import re
 
 import pandas as pd
+
+QUANTITY_ERROR = "Enter a positive whole-number request quantity."
+
+def validate_request_quantity(value) -> int:
+    """Validate runtime quantities without rounding or substitution."""
+    if (isinstance(value, bool) or not isinstance(value, Integral) or value <= 0):
+        raise ValueError(QUANTITY_ERROR)
+    try:
+        finite = isfinite(value)
+    except (TypeError, ValueError, OverflowError):
+        finite = False
+    
+    if not finite:
+        raise ValueError("Request quantity is outside the supported numeric range.")
+    
+    return int(value)
+
+def parse_clinical_quantity(text) -> int:
+    """Parse current form text without falling back to another quantity."""
+    if not isinstance(text, str):
+        raise ValueError(QUANTITY_ERROR)
+    
+    cleaned = text.strip()
+
+    if not re.fullmatch(r"[0-9]+", cleaned):
+        raise ValueError(QUANTITY_ERROR)
+    
+    try:
+        quantity = int(cleaned)
+    except ValueError as error:
+        raise ValueError("Request quantity is outside the supported numeric range.") from error
+
+    return validate_request_quantity(quantity)
+    
 
 @dataclass(frozen=True)
 class ClinicalRequestPreview:
@@ -19,28 +54,31 @@ class ClinicalRequestPreview:
     
 def build_clinical_request_preview(medication: pd.Series, requested_quantity: int | None) -> ClinicalRequestPreview:
     """Comapre a positive integer quantity with current recoreded stock."""
-    
-    # Reject missing, fractional, boolean, or nonpositive quantities.
-    if (isinstance(requested_quantity, bool) or not isinstance(requested_quantity, Integral) or requested_quantity <= 0):
-        raise ValueError("Enter a positive whole-number request quantity.")
-    
+    quantity = validate_request_quantity(requested_quantity)
     recorded_stock = medication.get("current_stock")
     
-    if (isinstance(recorded_stock, bool) or not isinstance(recorded_stock, Real) or not isfinite(recorded_stock) or recorded_stock < 0):
+    # Reject missing, fractional, boolean, or nonpositive quantities.
+    if (
+        isinstance(recorded_stock, bool) 
+        or not isinstance(recorded_stock, Real) 
+        or not isfinite(recorded_stock)
+        or recorded_stock < 0
+    ):
         raise ValueError("Recorded stock is unavailable or invalid; a preview cannot be evaluated.")
     
-    # These identifiers and units must accompany every preview.
-    labels: dict[str, str] = {}
+    labels = {}
+    
     for field in ("medication_id", "medication_name", "stock_unit"):
         value = medication.get(field)
-        
+
         if not isinstance(value, str) or not value.strip():
             raise ValueError(f"{field} is missing; a preview cannot be evaluated.")
-        
+
         labels[field] = value.strip()
-        
-    quantity = int(requested_quantity)
+    
     stock = float(recorded_stock)
+    
+    recorded_stock = medication.get("current_stock")
     
     # Historical counted_stock is deliberately not used.
     if stock == 0:

@@ -3,8 +3,12 @@
 import pandas as pd
 import streamlit as st
 
-from src.services.clinical import build_clinical_request_preview
+from src.services.clinical import (
+    build_clinical_request_preview,
+    parse_clinical_quantity,
+)
 from src.services.replenishment import build_replenishment_context
+from src.services.substitute_queries import ALTERNATIVES_COLUMN
 from src.services.workflow_models import Role
 from src.ui.components import (
     render_feature_placeholder,
@@ -16,35 +20,45 @@ from src.ui.session import (
     read_requests,
 )
 from src.ui.stock_indicators import render_stock_review_badge
+from src.ui.substitute_panels import (
+    attach_inventory_alternatives,
+    render_substitute_notice,
+)
 from src.ui.workflow_actions import (
     clinical_input_keys,
     new_clinical_draft_callback,
     prepare_clinical_draft,
-    submit_clinical_request_callback,
+    submit_clinical_form_callback,
 )
 from src.ui.workflow_components import (
     render_request_details,
     render_request_table,
     select_request,
 )
-from src.services.substitute_queries import ALTERNATIVES_COLUMN
-from src.ui.substitute_panels import (
-    attach_inventory_alternatives,
-    render_substitute_notice,
-)
 
-def _render_submission(medication: pd.Series, quantity: int, stock_unit: str, *, has_unit: bool) -> None:
-    """Render explicit submission independently of the temporary preview."""
+
+def _render_request_form(
+    medication: pd.Series,
+    stock_unit: str,
+    *,
+    has_unit: bool,
+) -> None:
+    """Keep current quantity, Preview and Submit within one form."""
     medication_id = medication["medication_id"]
     draft = prepare_clinical_draft(medication_id)
     info = get_session_info()
-    
-    st.subheader("Submit a synthetic medication request")
-    st.caption(
-        "Demo unit/ward stock requisition based on project assumptions. Do not enter patient information."
-    )
+    keys = clinical_input_keys(medication_id)
     submitted_id = draft["submitted_request_id"]
-    if submitted_id is not None:
+    submitted = submitted_id is not None
+
+    st.subheader("Medication request")
+    st.caption(
+        "Enter a positive whole quantity in the recorded stock unit. "
+        "Click Preview or Submit to apply the current form values. "
+        "Do not enter patient information."
+    )
+
+    if submitted:
         st.success(
             f"This draft was submitted as {submitted_id}. "
             "Its original quantity and request information are retained."
@@ -55,51 +69,78 @@ def _render_submission(medication: pd.Series, quantity: int, stock_unit: str, *,
             on_click=new_clinical_draft_callback,
             args=(medication_id,),
         )
-        return
-    
-    st.write(
-        f"**Request to submit:** {medication['medication_name']} "
-        f"({medication_id}), {quantity:,} {stock_unit}."
-    )
-    st.caption(
-        "Submission creates a session request for Pharmacist review. "
-        "It does not reserve stock, deduct stock or provide clinical approval."
-    )
-    
+        st.caption("Preview remains available. Changing its quantity does not edit the submitted request.")
+
     if not has_unit:
-        st.warning("A recorded stock unit is required before submission.")
-        
-    keys = clinical_input_keys(medication_id)
-    with st.form(key=f"clinical_submission_form_{medication_id}", clear_on_submit=False):
+        st.warning("A recorded stock unit is required for Preview and submission.")
+
+    with st.form(
+        key=(
+            f"clinical_request_form_{info.run_id}_"
+            f"{medication_id}_{draft['submission_key']}"
+        ),
+        clear_on_submit=False,
+        enter_to_submit=False,
+    ):
+        quantity_text = st.text_input(
+            f"Requested quantity — stock unit: {stock_unit}",
+            key=keys["quantity"],
+            placeholder="Enter a positive whole number",
+        )
+
+        st.caption(
+            "Preview checks recorded stock without creating a request. "
+            "Submission creates a synthetic request for Pharmacist review "
+            "without reserving or deducting stock."
+        )
+
         st.text_input(
             "Requesting location",
             placeholder="For example: Demo Ward",
             key=keys["location"],
+            disabled=submitted,
         )
         st.text_area(
             "Reason for the synthetic request",
             placeholder="Describe this demonstration stock request",
             key=keys["reason"],
+            disabled=submitted,
         )
         st.selectbox(
             "Demo urgency",
             options=["routine", "urgent"],
             format_func=str.capitalize,
             key=keys["urgency"],
-            help=("Illustrative queue categories only. Hospital urgency definitions are not established."),
+            disabled=submitted,
+            help=(
+                "Illustrative queue categories only. Hospital urgency definitions are not established."
+            ),
         )
         st.checkbox(
             "Allow consideration of substitutes during demo review",
             key=keys["substitution"],
-            help=("Preference only. This demo does not recommend, offer or approve substitutes."),
+            disabled=submitted,
+            help=(
+                "Preference only. This demo does not recommend, offer or approve substitutes."
+            ),
         )
+
+        preview_clicked = st.form_submit_button(
+            "Preview demo request",
+            key="clinical_preview_request",
+            disabled=not has_unit,
+        )
+
         st.form_submit_button(
             "Submit synthetic request",
-            disabled=not has_unit,
-            on_click=submit_clinical_request_callback,
+            key=(
+                f"workflow_action_clinical_submit_{info.run_id}_"
+                f"{medication_id}_{draft['submission_key']}"
+            ),
+            disabled=submitted or not has_unit,
+            on_click=submit_clinical_form_callback,
             kwargs={
                 "medication_id": medication_id,
-                "quantity": quantity,
                 "unit": stock_unit if has_unit else "",
                 "submission_key": draft["submission_key"],
                 "expected_run_id": info.run_id,
@@ -107,38 +148,87 @@ def _render_submission(medication: pd.Series, quantity: int, stock_unit: str, *,
             },
         )
 
+    # Preview exists only for this button-click run.
+    if preview_clicked:
+        try:
+            quantity = parse_clinical_quantity(quantity_text)
+            preview = build_clinical_request_preview(
+                medication,
+                quantity,
+            )
+        except ValueError as error:
+            st.session_state[keys["form_error"]] = str(error)
+        else:
+            st.session_state[keys["form_error"]] = ""
+
+            st.subheader("Temporary request preview")
+            st.write(
+                f"**Medication:** {preview.medication_name} "
+                f"({preview.medication_id})"
+            )
+            st.write(
+                f"**Validated preview quantity:** "
+                f"{preview.requested_quantity:,} "
+                f"{preview.stock_unit}"
+            )
+            st.write(
+                f"**Recorded stock:** "
+                f"{preview.recorded_stock:g} "
+                f"{preview.stock_unit}"
+            )
+
+            if preview.outcome == "sufficient":
+                st.success(preview.message)
+            else:
+                st.warning(preview.message)
+
+            st.caption(
+                "Preview only. No request was saved, sent or approved; "
+                "recorded stock is unchanged. This result describes "
+                "the validated quantity shown above."
+            )
+
+    form_error = st.session_state.get(keys["form_error"], "")
+    if form_error:
+        st.error(form_error)
+
+
 def _render_session_requests() -> None:
-    """Keep submitted requests visible independently of medication lookup."""
+    """Keep submitted requests independent of lookup and Preview."""
     st.subheader("Submitted requests — this demo session")
     st.caption(
         "Statuses and reasons come from the shared workflow. "
         "Changing tabs or clearing Preview does not delete these requests."
     )
+
     requests = read_requests(Role.CLINICAL)
-    
+
     if not requests:
         st.info("No synthetic requests have been submitted.")
         return
 
     render_request_table(requests, table_key="clinical_requests")
-    selected_request_id = select_request(requests, label="Inspect a submitted request", widget_key="workflow_ui_clinical_request_lookup")
+
+    selected_request_id = select_request(
+        requests,
+        label="Inspect a submitted request",
+        widget_key="workflow_ui_clinical_request_lookup",
+    )
+
     if selected_request_id is not None:
         request = read_request_details(selected_request_id, Role.CLINICAL)
         render_request_details(request, key_prefix="clinical_request")
 
+
 def render_clinical_view(medications: pd.DataFrame) -> None:
-    """Show availability, temporary Preview and explicit demo submission."""
+    """Show availability, temporary Preview and explicit submission."""
     st.write(
         "Check recorded medication availability, preview a quantity or submit a synthetic request for review."
     )
-    
-    #Use stable IDs for selection while displaying medication names.
-    medication_labels = (
-        medications.set_index("medication_id")["medication_name"].to_dict()
-    )
-    
+
+    medication_labels = (medications.set_index("medication_id")["medication_name"].to_dict())
+
     st.subheader("Medication lookup")
-    
     selected_id = st.selectbox(
         "Find a medication",
         options=medications["medication_id"].to_list(),
@@ -149,9 +239,7 @@ def render_clinical_view(medications: pd.DataFrame) -> None:
         placeholder="Choose or type a medication name",
         key="clinical_medication_lookup",
     )
-    
-    #Keep clinical table focus on availability
-    #Quantities ratain their stock units to avoid misleading comparisons.
+
     availability_columns = [
         "medication_name",
         "current_stock",
@@ -159,99 +247,64 @@ def render_clinical_view(medications: pd.DataFrame) -> None:
         "status",
         ALTERNATIVES_COLUMN,
     ]
-    
-    #Show all records initially, or the selected medication after lookup.
+
     visible_medications = medications
     selected_medication = None
     stock_unit = "N/A"
     has_unit = False
-    
+
     if selected_id is not None:
-        visible_medications = medications.loc[
-            medications["medication_id"].eq(selected_id)
-        ]
+        visible_medications = medications.loc[medications["medication_id"].eq(selected_id)]
         selected_medication = visible_medications.iloc[0]
-        
+
         selected_unit = selected_medication.get("stock_unit")
-        has_unit = (isinstance(selected_unit, str) and bool(selected_unit.strip()))
+        has_unit = (
+            isinstance(selected_unit, str)
+            and bool(selected_unit.strip())
+        )
         if has_unit:
             stock_unit = selected_unit.strip()
-        
+
         st.write(
             f"**Selected medication:** "
             f"{selected_medication['medication_name']} ({selected_id})"
         )
-        
-        stock_column, unit_column, status_column = st.columns(3)
-        
-        stock_column.metric("Recorded stock", f"{float(selected_medication['current_stock']):g}")
-        unit_column.metric("Stock unit", stock_unit)
-        status_column.metric("Recorded availability", selected_medication["status"])
-        
-        st.caption("Recorded availability is not a physical stock confirmation or a clinical suitability assessment.")
 
-        st.caption("Inventory threshold context - separate from the request preview.")
+        stock_column, unit_column, status_column = st.columns(3)
+        stock_column.metric(
+            "Recorded stock",
+            f"{float(selected_medication['current_stock']):g}",
+        )
+        unit_column.metric("Stock unit", stock_unit)
+        status_column.metric(
+            "Recorded availability",
+            selected_medication["status"],
+        )
+
+        st.caption(
+            "Recorded availability is not a physical stock confirmation or a clinical suitability assessment."
+        )
+        st.caption(
+            "Inventory threshold context — separate from request Preview."
+        )
+
         selected_review = build_replenishment_context(visible_medications).iloc[0]["ordering_review"]
         render_stock_review_badge(selected_review, prominent=True)
-        
+
     render_substitute_notice()
-    
     availability_display = attach_inventory_alternatives(visible_medications, Role.CLINICAL)
-    
     render_medication_table(
         availability_display.reindex(columns=availability_columns),
         export_key="clinical_inventory",
     )
-    
-    st.subheader("Temporary request preview")
-    st.caption("Preview only. No request is saved or sent, and no stock is reserved, deducted or approved.")
-    
+
     if selected_medication is None:
         st.info("Select a medication above to preview or submit a request.")
     else:
-        # Remains outside the submission form. Quantity changes rerun the page and clear the previous temporary preview.
-        quantity = st.number_input(
-            f"Requested quantity - stock unit: {stock_unit}",
-            min_value=1,
-            step=1,
-            key=f"clinical_request_quantity_{selected_id}",
-        )
-        
-        # Render a preview only on this button-click run.
-        # Changing the selection or quantity clears the previous result.
-        if st.button(
-            "Preview demo request",
-            key="clinical_preview_request",
-        ):
-            try:
-                preview = build_clinical_request_preview(selected_medication, quantity)
-            except ValueError as error:
-                st.error(str(error))
-            else:
-                st.write(
-                    f"**Medication:** {preview.medication_name} "
-                    f"({preview.medication_id})"
-                )
-                st.write(
-                    f"**Stock comparison:** requested quantity "
-                    f"{preview.requested_quantity:,}; recorded stock "
-                    f"{preview.recorded_stock:g}; "
-                    f"stock unit: {preview.stock_unit}."
-                )
-                
-                if preview.outcome == "sufficient":
-                    st.success(preview.message)
-                else:
-                    st.warning(preview.message)
-                    
-                st.caption("Preview only. No request was saved, sent or approved; recorded stock is unchanged.")
+        _render_request_form(selected_medication, stock_unit, has_unit=has_unit)
 
-        _render_submission(selected_medication, quantity, stock_unit, has_unit=has_unit)
-        
     _render_session_requests()
-    
-    
-    #Research describs substitue info, not validated equivalence.  
+
     st.subheader("Illustrative alternatives (information only)")
     st.caption(
         "Recorded relationships appear in the inventory table "
@@ -265,4 +318,3 @@ def render_clinical_view(medications: pd.DataFrame) -> None:
         "Displayed availability reflects recorded stock quantities only; "
         "it does not establish clinical suitability or usable expiry.",
     )
-    

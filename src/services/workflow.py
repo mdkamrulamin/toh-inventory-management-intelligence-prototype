@@ -32,6 +32,7 @@ from src.services.workflow_models import (
     WorkflowResult,
 )
 from src.data.substitute_schema import SubstituteFixture
+from src.services.clinical import validate_request_quantity
 
 def _text(value, field: str, code: str = "invalid_input") -> str:
     if not isinstance(value, str) or not value.strip():
@@ -44,12 +45,11 @@ def _timestamp(now: datetime) -> str:
     return now.astimezone(timezone.utc).isoformat(timespec="seconds")
 
 def _quantity(value) -> int:
-    # Preserve the existing integer-input preview convention.
-    # Never round or truncate a fractional request.
-    if (isinstance(value, bool) or not isinstance(value, Integral) or value <= 0):
-        raise WorkflowError("invalid_quantity", "Enter a postive whole-number request quantity.")
-    
-    return int(value)
+    """Use the same whole-unit contract as Clinical preview."""
+    try:
+        return validate_request_quantity(value)
+    except ValueError as error:
+        raise WorkflowError("invalid_quantity", str(error)) from error
 
 def _number(value, field: str, code: str) -> int | float:
     if isinstance(value, bool) or not isinstance(value, Real):

@@ -23,6 +23,7 @@ from src.ui.session import (
     apply_workflow_action,
     get_session_info,
 )
+from src.services.clinical import parse_clinical_quantity
 
 PHARMACIST_ACTIONS = {
     "start_review",
@@ -43,10 +44,12 @@ def _draft_key(medication_id: str) -> str:
     return f"workflow_ui_clinical_draft_{medication_id}"
 
 def clinical_input_keys(medication_id: str) -> dict[str, str]:
-    """Keep submission inputs separate from the existing preview controls."""
+    """Identify resettable Clinical form fields."""
     prefix = f"workflow_ui_clinical_{medication_id}"
     
     return {
+        "quantity": f"{prefix}_quantity_text",
+        "form_error": f"{prefix}_form_error",
         "location": f"{prefix}_location",
         "reason": f"{prefix}_reason",
         "urgency": f"{prefix}_urgency",
@@ -98,7 +101,9 @@ def new_clinical_draft_callback(medication_id: str, *, state_store: MutableMappi
     store[keys["reason"]] = ""
     store[keys["urgency"]] = "routine"
     store[keys["substitution"]] = False
-    store[f"clinical_request_quantity_{medication_id}"] = 1
+    store[keys["quantity"]] = ""
+    store[keys["form_error"]] = ""
+    store.pop(f"clinical_request_quantity_{medication_id}", None)
     
 def submit_clinical_request_callback(
     medication_id: str,
@@ -164,6 +169,71 @@ def submit_clinical_request_callback(
     # Retain a UI receipt. The canonical request is held by the adapter.
     store[_draft_key(medication_id)] = {**draft, "submitted_request_id": result.request_id}
     _notice(store, "success", f"{result.message} No stock was reserved or deducted.")
+    
+def submit_clinical_form_callback(
+    medication_id: str,
+    unit: str,
+    submission_key: str,
+    expected_run_id: str,
+    expected_revision: int,
+    *,
+    source_path: str | Path = SAMPLE_MEDICATIONS_PATH,
+    state_store: MutableMapping | None = None,
+    now: datetime | None = None,
+) -> None:
+    """Validate the current submitted form text before creating a request.
+
+    No quantity is captured in callback arguments. Streamlit supplies
+    current form values through session state before this callback runs.
+    """
+    store = _store(state_store)
+    keys = clinical_input_keys(medication_id)
+    current_draft = False
+
+    try:
+        info = get_session_info(state_store=store)
+
+        if info.run_id != expected_run_id:
+            raise WorkflowError("stale_run", "The demo was reset. Select the medication again.")
+
+        draft = store.get(_draft_key(medication_id))
+
+        if (
+            not isinstance(draft, dict)
+            or draft.get("run_id") != expected_run_id
+            or draft.get("submission_key") != submission_key
+        ):
+            raise WorkflowError("stale_draft", "This draft changed. Review the current form and retry.")
+
+        current_draft = True
+        quantity = parse_clinical_quantity(store.get(keys["quantity"], ""))
+
+    except (OSError, ValueError) as error:
+        if current_draft:
+            store[keys["form_error"]] = str(error)
+
+        _notice(store, "error", str(error))
+        return
+
+    store[keys["form_error"]] = ""
+
+    # Retain existing submission, unit and duplicate-protection logic.
+    submit_clinical_request_callback(
+        medication_id=medication_id,
+        quantity=quantity,
+        unit=unit,
+        submission_key=submission_key,
+        expected_run_id=expected_run_id,
+        expected_revision=expected_revision,
+        source_path=source_path,
+        state_store=store,
+        now=now,
+    )
+
+    notice = store.get(NOTICE_KEY)
+
+    if notice is not None and notice["kind"] == "error":
+        store[keys["form_error"]] = notice["message"]
     
 def pharmacist_action_callback(
     action_name: str,
