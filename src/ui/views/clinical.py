@@ -27,6 +27,11 @@ from src.ui.workflow_components import (
     render_request_table,
     select_request,
 )
+from src.services.substitute_queries import ALTERNATIVES_COLUMN
+from src.ui.substitute_panels import (
+    attach_inventory_alternatives,
+    render_substitute_notice,
+)
 
 def _render_submission(medication: pd.Series, quantity: int, stock_unit: str, *, has_unit: bool) -> None:
     """Render explicit submission independently of the temporary preview."""
@@ -84,7 +89,7 @@ def _render_submission(medication: pd.Series, quantity: int, stock_unit: str, *,
             help=("Illustrative queue categories only. Hospital urgency definitions are not established."),
         )
         st.checkbox(
-            "Allow consideration of substitutes during future review",
+            "Allow consideration of substitutes during demo review",
             key=keys["substitution"],
             help=("Preference only. This demo does not recommend, offer or approve substitutes."),
         )
@@ -152,6 +157,7 @@ def render_clinical_view(medications: pd.DataFrame) -> None:
         "current_stock",
         "stock_unit",
         "status",
+        ALTERNATIVES_COLUMN,
     ]
     
     #Show all records initially, or the selected medication after lookup.
@@ -188,8 +194,12 @@ def render_clinical_view(medications: pd.DataFrame) -> None:
         selected_review = build_replenishment_context(visible_medications).iloc[0]["ordering_review"]
         render_stock_review_badge(selected_review, prominent=True)
         
+    render_substitute_notice()
+    
+    availability_display = attach_inventory_alternatives(visible_medications, Role.CLINICAL)
+    
     render_medication_table(
-        visible_medications.reindex(columns=availability_columns),
+        availability_display.reindex(columns=availability_columns),
         export_key="clinical_inventory",
     )
     
@@ -242,11 +252,11 @@ def render_clinical_view(medications: pd.DataFrame) -> None:
     
     
     #Research describs substitue info, not validated equivalence.  
-    render_feature_placeholder(
-        "Approved substitute-product information",
-        "No validated substitute data is available. "
-        "Any candidate requires clinical/pharmacy review and approval. "
-        "This demonstration does not rank or approve alternatives.",
+    st.subheader("Illustrative alternatives (information only)")
+    st.caption(
+        "Recorded relationships appear in the inventory table "
+        "for red/yellow stock rows. They are synthetic and unvalidated. "
+        "No substitute has been recommended, offered or approved."
     )
     
     render_feature_placeholder(

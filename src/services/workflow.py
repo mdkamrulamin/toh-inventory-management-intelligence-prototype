@@ -31,6 +31,7 @@ from src.services.workflow_models import (
     WorkflowError,
     WorkflowResult,
 )
+from src.data.substitute_schema import SubstituteFixture
 
 def _text(value, field: str, code: str = "invalid_input") -> str:
     if not isinstance(value, str) or not value.strip():
@@ -188,6 +189,7 @@ def initialize_demo(
     dataset_path: str,
     dataset_fingerprint: str,
     now: datetime,
+    substitute_fixture: SubstituteFixture | None = None,
 ) -> DemoState:
     """Initialize from loader output using independent inventory copies."""
     stamp = _timestamp(now)
@@ -230,6 +232,9 @@ def initialize_demo(
     else:
         baseline["status"] = expected
         
+    if (substitute_fixture is not None and not isinstance(substitute_fixture, SubstituteFixture)):
+        raise WorkflowError("invalid_state", "Use a validated substitute fixture snapshot.")
+        
     return DemoState(
         run_id=uuid4().hex,
         revision=0,
@@ -240,6 +245,7 @@ def initialize_demo(
         requests={},
         next_request_number=1,
         started_time=stamp,
+        substitute_fixture=deepcopy(substitute_fixture),
     )
     
 def make_context(state: DemoState, role: Role, *, now: datetime | None = None) -> ActionContext:
@@ -659,16 +665,23 @@ def close_without_supply(state, request_id, reason, context) -> WorkflowResult:
     return _publish(state, updated, "Closed without fulfillment; stock and linked orders are unchanged.")
 
 
-def reset_demo(state: DemoState, *, now: datetime,) -> DemoState:
+def reset_demo(state: DemoState, *, now: datetime, substitute_fixture: SubstituteFixture | None = None) -> DemoState:
     """Restore the baseline and clear requests in a new demo run."""
     stamp = _timestamp(now)
 
     if stamp < state.started_time:
-        raise WorkflowError("invalid_time", "Reset cannot predate the active demo.",)
+        raise WorkflowError("invalid_time", "Reset cannot predate the active demo.")
 
+    fixture = (
+        state.substitute_fixture
+        if substitute_fixture is None
+        else substitute_fixture
+    )
+    
     return initialize_demo(
         state.initial_inventory,
         dataset_path=state.dataset_path,
         dataset_fingerprint=state.dataset_fingerprint,
         now=now,
+        substitute_fixture=fixture,
     )

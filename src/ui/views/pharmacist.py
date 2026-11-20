@@ -21,6 +21,11 @@ from src.ui.workflow_components import (
     render_request_table,
     select_request,
 )
+from src.ui.substitute_panels import (
+    render_alternative_review,
+    render_pharmacist_inventory,
+    render_substitute_history,
+)
 
 def _render_stock_context(medications: pd.DataFrame, request: dict) -> dict:
     """Display current role-permitted inventory and availability context."""
@@ -237,20 +242,24 @@ def _render_review_actions(request: dict, availability: dict) -> None:
             "Later receipts may still replenish inventory without reopening this request."
         )
         action_button(
-            "Close demo request without supply",
+            "Close demo request without fulfillment",
             "close_without_supply",
             disabled=not has_reason,
         )
         
 def render_pharmacist_view(medications: pd.DataFrame) -> None:
-    """Connect submitted requests to deliberate synthetic review actions."""
+    """Show inventory, deliberate review actions and retained demo history."""
     st.write("Review synthetic requests and route them using recorded availability and the agreed demonstration workflow.")
     st.warning("Synthetic workflow only. Demo user is not authenticated, and these actions do not constitute real clinical authorization.")
-    st.caption("Queue order: demo urgency, then original arrival time.Review deadlines and governed ABC/VEN values are unavailable.")
-    st.caption("Redistribution and substitute selection remain conceptual. This demo does not execute or automatically recommend them.")
-    st.subheader("Synthetic request queue")
+    st.caption("Queue order: demo urgency, then original arrival time. Review deadlines and governed ABC/VEN values are unavailable.")
+    st.caption("Illustrative alternative information and demo review notes do not select or apply a substitute.")
     
+    # Always visible, including an empty queue or no request selection.
+    render_pharmacist_inventory()
+    
+    st.subheader("Synthetic request queue")
     include_completed = st.checkbox("Include returned and closed requests", key="workflow_ui_pharmacist_include_completed")
+    
     requests = read_requests(Role.PHARMACIST)
     if not include_completed:
         requests = [
@@ -261,16 +270,36 @@ def render_pharmacist_view(medications: pd.DataFrame) -> None:
         
     if not requests:
         st.info("No requests match the current queue filter.")
-        return
-    
-    render_request_table(requests, table_key="pharmacist_requests")
-    selected_request_id = select_request(requests, label="Open a request for inspection", widget_key="workflow_ui_pharmacist_request_lookup")
-    if selected_request_id is None:
-        st.info("Select a request to inspect it. Opening a request does not start its review.")
-        return
-    
-    request = read_request_details(selected_request_id, Role.PHARMACIST)
-    render_request_details(request, key_prefix="pharmacist_request")
-    availability = _render_stock_context(medications, request)
-    _render_review_actions(request, availability)
+    else:
+        render_request_table(requests, table_key="pharmacist_requests")
+        selected_request_id = select_request(
+            requests,
+            label="Open a request for inspection",
+            widget_key="workflow_ui_pharmacist_request_lookup",
+        )
+        
+        if selected_request_id is None:
+            st.info("Select a request to inspect it. Opening a request does not start its review.")
+        else:
+            request = read_request_details(selected_request_id, Role.PHARMACIST)
+            render_request_details(request, key_prefix="pharmacist_request")
+            availability = _render_stock_context(medications, request)
+            info = get_session_info()
+            render_alternative_review(selected_request_id, info.run_id, info.revision)
+            _render_review_actions(request, availability)
+            render_substitute_history(
+                title="Alternative review history — this request",
+                table_key=(
+                    f"pharmacist_substitute_request_"
+                    f"{selected_request_id}"
+                ),
+                request_id=selected_request_id,
+            )
+            
+            
+    # Outside all queue/selection branches.
+    render_substitute_history(
+        title="Alternative review history — whole demo run",
+        table_key="pharmacist_substitute_run",
+    )
     

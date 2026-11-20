@@ -1,0 +1,3 @@
+relationship_id,source_medication_id,candidate_medication_id,relationship_label,relationship_validation_status,provenance,comparison_note,fixture_version
+SR-001,MED003,MED001,Illustrative alternative,Unvalidated - synthetic demonstration only,Synthetic demo entry created by the project team. No TOH or clinical source,"Same dosage form (tablet). Dose, strength and clinical suitability not assessed",v1
+SR-002,MED001,MED003,Illustrative alternative,Unvalidated - synthetic demonstration only,Synthetic demo entry created by the project team. No TOH or clinical source,"Same dosage form (tablet). Dose, strength and clinical suitability not assessed",v1

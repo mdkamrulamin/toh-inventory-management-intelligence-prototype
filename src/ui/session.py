@@ -14,7 +14,10 @@ from pathlib import Path
 
 import streamlit as st
 
-from src.config import SAMPLE_MEDICATIONS_PATH
+from src.config import (
+    SAMPLE_MEDICATIONS_PATH,
+    SUBSTITUTE_RELATIONSHIPS_PATH,
+)
 from src.data.loader import load_medications
 from src.services import workflow as wf
 from src.services import workflow_queries as queries
@@ -30,6 +33,9 @@ from src.services.workflow_models import (
 )
 from src.services import receipts as receipt_services
 from src.services import receipt_queries
+from src.data.substitute_loader import load_substitute_relationships
+from src.services import substitute_queries
+from src.services import substitute_reviews as substitute_review_services
 
 STATE_KEY = "demo_state"
 NOTICE_KEY = "workflow_notice"
@@ -56,6 +62,7 @@ _ACTIONS = {
     "cancel_order": order_services.cancel_order,
     "confirm_receipt": receipt_services.confirm_receipt,
     "return_to_on_order": wf.return_to_on_order,
+    "record_substitute_review": substitute_review_services.record_substitute_review,
 }
 
 @dataclass(frozen=True)
@@ -101,29 +108,43 @@ def _check_source(state: DemoState, source_path: str | Path) -> None:
     if (path != state.dataset_path or fingerprint != state.dataset_fingerprint):
         raise WorkflowError("dataset_mismatch", "The configured dataset changed. Start a new demo explicitly before continuing.")
     
-def _load_new_state(source_path: str | Path, now: datetime) -> DemoState:
+def _load_new_state(
+    source_path: str | Path, 
+    now: datetime, 
+    *, 
+    relationship_path: str | Path = SUBSTITUTE_RELATIONSHIPS_PATH,
+) -> DemoState:
     path, fingerprint = _source_descriptor(source_path)
     medications = load_medications(path)
     
-    # Do not publish a state if its source changed during loading.
+    fixture = load_substitute_relationships(relationship_path, medication_ids=medications["medication_id"])
+    
+    # Keep the medication source consistent throughout initialization.
     after_path, after_fingerprint = _source_descriptor(path)
     
     if (path != after_path or fingerprint != after_fingerprint):
         raise WorkflowError("dataset_changed_during_load", "The dataset changed while loading. Retry when it is stable.")
     
-    return wf.initialize_demo(medications, dataset_path=path, dataset_fingerprint=fingerprint, now=now)
+    return wf.initialize_demo(
+        medications, 
+        dataset_path=path, 
+        dataset_fingerprint=fingerprint, 
+        now=now,
+        substitute_fixture=fixture,
+    )
 
 def ensure_demo_session(
     source_path: str | Path = SAMPLE_MEDICATIONS_PATH,
     *,
+    relationship_path: str | Path = SUBSTITUTE_RELATIONSHIPS_PATH,
     state_store: MutableMapping | None = None,
     now: datetime | None = None,
 ) -> DemoSessionInfo:
-    """Initialize once; normal reruns retain active inventory/requests."""
+    """Initialize once; reruns retain the run's frozen relationship fixture."""
     store = _store(state_store)
     
     if STATE_KEY not in store:
-        candidate = _load_new_state(source_path, _now(now))
+        candidate = _load_new_state(source_path, _now(now), relationship_path=relationship_path)
         store[STATE_KEY] = candidate
     else:
         _check_source(_current(store), source_path)
@@ -194,12 +215,27 @@ def _clear_demo_ui(store: MutableMapping, clinical_tab_label: str) -> None:
     # Button trigger state is managed by Streamlit.
     # Do not manually assign clinical_preview_request.
     
-def reset_demo_session(*, clinical_tab_label: str, state_store: MutableMapping | None = None, now: datetime | None = None) -> DemoSessionInfo:
-    """Restore the stored baseline and clear workflow/UI state."""
+def reset_demo_session(
+    *, 
+    clinical_tab_label: str,
+    relationship_path: str | Path | None = None, 
+    state_store: MutableMapping | None = None, 
+    now: datetime | None = None,
+) -> DemoSessionInfo:
+    """Restore the baseline, reload relationships and clear transactions."""
     store = _store(state_store)
     state = _current(store)
     
-    candidate = wf.reset_demo(state, now=_now(now))
+    if relationship_path is None:
+        relationship_path = (
+            state.substitute_fixture.source_path
+            if state.substitute_fixture is not None
+            else SUBSTITUTE_RELATIONSHIPS_PATH
+        )
+
+    fixture = load_substitute_relationships(relationship_path, medication_ids=state.initial_inventory["medication_id"])
+    
+    candidate = wf.reset_demo(state, now=_now(now), substitute_fixture=fixture)
     
     _clear_demo_ui(store, clinical_tab_label)
     store[STATE_KEY] = candidate
@@ -210,14 +246,14 @@ def replace_demo_dataset(
     source_path: str | Path,
     *,
     clinical_tab_label: str,
+    relationship_path: str | Path = SUBSTITUTE_RELATIONSHIPS_PATH,
     state_store: MutableMapping | None = None,
     now: datetime | None = None,
 ) -> DemoSessionInfo:
-    """Explicitly start a new run from a newly validated source."""
+    """Deliberately initialize a new dataset and relationship snapshot."""
     store = _store(state_store)
     
-    # Loading and validation finish before existing state/UI is cleared.
-    candidate = _load_new_state(source_path, _now(now))
+    candidate = _load_new_state(source_path, _now(now), relationship_path=relationship_path)
     
     _clear_demo_ui(store, clinical_tab_label)
     store[STATE_KEY] = candidate
@@ -239,7 +275,7 @@ def reset_demo_callback(*, clinical_tab_label: str, state_store: MutableMapping 
         store[NOTICE_KEY] = {
             "kind": "success",
             "message": (
-                "Demo reset. Starting stock restored and synthetic requests cleared."
+                "Demo reset. Starting stock restored; synthetic requests, orders, receipts and substitute reviews cleared."
             ),
         }
         
@@ -361,3 +397,18 @@ def read_receipts(role: Role | str, *, order_id: str | None = None, state_store:
 def read_receipt_details(receipt_id: str, role: Role | str, *, state_store: MutableMapping | None = None) -> dict:
     """Read one detached, role-projected receipt record."""
     return receipt_queries.get_receipt_details(_current(_store(state_store)), receipt_id, role)
+
+def read_substitute_fixture_info(*, state_store: MutableMapping | None = None) -> dict:
+    return substitute_queries.get_fixture_info(_current(_store(state_store)))
+
+
+def read_inventory_alternatives(role: Role | str, *, state_store: MutableMapping | None = None):
+    return substitute_queries.get_inventory_alternatives(_current(_store(state_store)), role)
+
+
+def read_request_alternatives(request_id: str, role: Role | str, *, state_store: MutableMapping | None = None) -> dict:
+    return substitute_queries.get_request_alternatives(_current(_store(state_store)), request_id, role)
+
+
+def read_substitute_reviews(role: Role | str, *, request_id: str | None = None, state_store: MutableMapping | None = None) -> list[dict]:
+    return substitute_queries.list_substitute_reviews(_current(_store(state_store)), role, request_id=request_id)

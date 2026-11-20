@@ -12,6 +12,10 @@ from src.ui.stock_indicators import (
     stock_review_style,
 )
 from src.ui.styles import style_stock_figure
+from src.services.substitute_queries import (
+    ALTERNATIVES_HELP,
+    ALTERNATIVES_COLUMN,
+)
 
 def render_medication_table(
     medications: pd.DataFrame,
@@ -64,6 +68,21 @@ def render_medication_table(
         "Table tools: show or hide columns, download CSV, "
         "search, or open fullscreen."
     )
+    
+    column_config = {}
+    alternatives_label = FIELD_LABELS[ALTERNATIVES_COLUMN]
+    has_alternatives = (
+        alternatives_label in display_medications.columns
+    )
+
+    if has_alternatives:
+        column_config[alternatives_label] = (
+            st.column_config.TextColumn(
+                label=alternatives_label,
+                width=300,
+                help=ALTERNATIVES_HELP,
+            )
+        )
     #It provides an interactive table and these options hide the row index and fill the available width.
     # The container provides the CSS class used by our toolbar styling.
     # Keep the key here rather than on the read-only dataframe.
@@ -73,6 +92,7 @@ def render_medication_table(
             hide_index=True,
             width="stretch",
             row_height=40,
+            column_config=column_config,
         )
     
 def render_stock_chart(medications: pd.DataFrame, key_prefix: str = "inventory") -> None:

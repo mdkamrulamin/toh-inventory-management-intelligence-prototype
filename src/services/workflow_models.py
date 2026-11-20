@@ -7,7 +7,9 @@ from decimal import Decimal
 
 import pandas as pd
 
-DEMO_SCHEMA_VERSION = 3
+from src.data.substitute_schema import SubstituteFixture
+
+DEMO_SCHEMA_VERSION = 4
 
 class Role(StrEnum):
     CLINICAL = "clinical"
@@ -218,6 +220,43 @@ class ReceiptRecord:
         "Synthetic demonstration receipt. No physical shipment is verified."
     )
     
+class SubstituteDecision(StrEnum):
+    KEPT_FOR_CONSIDERATION = "kept_for_consideration"
+    DO_NOT_PURSUE = "do_not_pursue"
+    NEEDS_MORE_REVIEW = "needs_more_review"
+
+
+@dataclass(frozen=True)
+class SubstituteReviewInput:
+    relationship_id: str
+    decision: SubstituteDecision | str
+    reason: str
+
+
+@dataclass(frozen=True)
+class CandidateInventorySnapshot:
+    recorded_stock: int | float
+    stock_unit: str | None
+    indicator: str
+    indicator_text: str
+
+
+@dataclass(frozen=True)
+class SubstituteReviewRecord:
+    review_id: str
+    run_id: str
+    request_id: str
+    source_medication_id: str
+    candidate_medication_id: str
+    relationship_id: str
+    decision: SubstituteDecision
+    reason: str
+    recorded_time: str
+    inventory_at_review: CandidateInventorySnapshot
+    fixture_version: str
+    fixture_fingerprint: str
+    recorded_by: str = "Demo user"
+    recorded_by_role: Role = Role.PHARMACIST
     
 @dataclass(frozen=True)
 class DemoState:
@@ -235,6 +274,12 @@ class DemoState:
     next_order_number: int = 1
     receipts: dict[str, ReceiptRecord] = field(default_factory=dict)
     next_receipt_number: int = 1
+    substitute_fixture: SubstituteFixture | None = None
+    substitute_reviews: dict[str, SubstituteReviewRecord] = field(
+        default_factory=dict
+    )
+    next_substitute_review_number: int = 1
+    
     
 @dataclass(frozen=True)
 class WorkflowResult:
@@ -244,3 +289,4 @@ class WorkflowResult:
     message: str
     order_id: str | None = None
     receipt_id: str | None = None
+    substitute_review_id: str | None = None

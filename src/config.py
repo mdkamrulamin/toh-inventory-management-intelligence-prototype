@@ -120,9 +120,10 @@ FIELD_LABELS: dict[str, str] = {
     "complete_abc_count": "Records with complete ABC inputs",
     "total_monthly_consumption_value_cad": "Full-population monthly consumption value (CAD/month)",
     "sku_count": "Medication SKUs",
+    "alternatives_illustrative": "Alternatives (illustrative)",
 }
 
 # Resolve data paths from project loc
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 SAMPLE_MEDICATIONS_PATH = PROJECT_ROOT / "data" / "sample_medications_extended.csv"
-
+SUBSTITUTE_RELATIONSHIPS_PATH = PROJECT_ROOT / "data" / "sample_substitute_relationships.csv"

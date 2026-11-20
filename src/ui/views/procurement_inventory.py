@@ -18,6 +18,12 @@ from src.ui.components import (
 from src.ui.handoff_panels import render_procurement_handoffs
 from src.ui.stock_indicators import render_stock_review_legend
 from src.ui.order_panels import render_procurement_orders
+from src.services.substitute_queries import ALTERNATIVES_COLUMN
+from src.services.workflow_models import Role
+from src.ui.substitute_panels import (
+    attach_inventory_alternatives,
+    render_substitute_notice,
+)
 
 def render_procurement_inventory_view(medications: pd.DataFrame) -> None:
     """Show linked shortages and supported synthetic stock analytics."""
@@ -45,15 +51,20 @@ def render_procurement_inventory_view(medications: pd.DataFrame) -> None:
         "unit_cost",
         "supplier",
         "status",
+        ALTERNATIVES_COLUMN,
     ]
     
     st.caption(
         "Consumption uses supplied stock units per illustrative month; costs are CAD per stock unit. Expiry dates are synthetic."  
     )
     
+    render_substitute_notice()
+    
+    procurement_display = attach_inventory_alternatives(medications, Role.PROCUREMENT)
+    
     render_medication_table(
         prepare_report_display(
-            medications.reindex(columns=procurement_columns)
+            procurement_display.reindex(columns=procurement_columns)
         ),
         export_key="procurement_inventory",
     )
