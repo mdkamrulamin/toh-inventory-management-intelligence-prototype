@@ -125,6 +125,7 @@ FIELD_LABELS: dict[str, str] = {
     "shelf_life_as_of": "Demo reference date (UTC)",
     "representative_expiry_context": "Representative expiry context",
     "expiry_context_note": "Expiry context limitations",
+    "coverage_note": "Coverage context",
 }
 
 # Resolve data paths from project loc

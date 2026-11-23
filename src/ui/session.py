@@ -428,4 +428,8 @@ def read_demo_reference_date(*, state_store: MutableMapping | None = None):
 def read_inventory_expiry_context(role: Role | str, *, state_store: MutableMapping | None = None):
     """Read detached inventory with shared representative expiry context."""
     return queries.get_inventory_expiry_context(_current(_store(state_store)), role)
+
+def read_pharmacist_inventory_context(role: Role | str, *, state_store: MutableMapping | None = None):
+    """Read detached Pharmacist coverage and representative expiry context."""
+    return queries.get_pharmacist_inventory_context(_current(_store(state_store)), role)
     

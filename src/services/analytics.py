@@ -298,4 +298,53 @@ def build_stock_analytics(medications: pd.DataFrame) -> StockAnalytics:
             "abc_scope": ABC_SCOPE,
         }
     )
-            
+    
+
+def build_stock_coverage_context(medications: pd.DataFrame) -> pd.DataFrame:
+    """Reuse coverage calculations with explicitly cost-free inputs.
+
+    Returns medication identity, coverage in months and an explanation.
+    Financial fields and unrelated analytics are excluded.
+    """
+    inputs = medications.reindex(
+        columns=[
+            "medication_id",
+            "medication_name",
+            "current_stock",
+            "stock_unit",
+            "average_monthly_consumption",
+        ]
+    ).copy(deep=True)
+    
+    calculated = build_stock_analytics(inputs).rows
+    
+    result = calculated[["medication_id", "stock_coverage_months"]].copy(deep=True)
+    
+    notes = []
+    for _, row in calculated.iterrows():
+        value = row["stock_coverage_months"]
+        unit = row["stock_unit"]
+        usage = _number(row, "average_monthly_consumption")
+
+        if value is not None:
+            note = "Illustrative coverage in months."
+        elif not isinstance(unit, str) or not unit.strip():
+            note = "N/A — stock unit unavailable."
+        elif usage is None:
+            note = "N/A — monthly use unavailable."
+        elif usage == 0:
+            note = "N/A — supplied monthly use is zero."
+        else:
+            note = "N/A — coverage exceeds the finite calculation range."
+
+        notes.append(note)
+        
+    result["coverage_note"] = pd.Series(
+        notes,
+        index=result.index,
+        dtype="string",
+    )
+
+    return result
+    
+    

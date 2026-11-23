@@ -26,6 +26,7 @@ from src.services.expiry import (
     add_representative_expiry_context,
     demo_reference_date,
 )
+from src.services.analytics import build_stock_coverage_context
 
 INVENTORY_COLUMNS = (
     "medication_id",
@@ -407,7 +408,22 @@ def get_inventory_expiry_context(state: DemoState, role: Role | str) -> pd.DataF
     
     return add_representative_expiry_context(inventory, as_of=demo_reference_date(state.started_time))
     
+def get_pharmacist_inventory_context(state: DemoState, role: Role | str) -> pd.DataFrame:
+    """Return cost-free Pharmacist inventory, coverage and expiry context."""
+    role = _role(role)
     
+    if role != Role.PHARMACIST:
+        raise WorkflowError("wrong_role", "This inventory-context projection is for Pharmacist.")
     
+    # Apply the existing role boundary before calculating coverage.
+    inventory = get_inventory_expiry_context(state, role)
+    
+    coverage = build_stock_coverage_context(inventory).set_index("medication_id")
+
+    inventory["stock_coverage_months"] = (inventory["medication_id"].map(coverage["stock_coverage_months"]))
+    inventory["coverage_note"] = (inventory["medication_id"].map(coverage["coverage_note"]))
+    inventory["ordering_review"] = (build_replenishment_context(inventory)["ordering_review"])
+    
+    return inventory.copy(deep=True)
     
     

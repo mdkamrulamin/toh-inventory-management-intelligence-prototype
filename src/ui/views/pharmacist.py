@@ -3,12 +3,12 @@
 import pandas as pd
 import streamlit as st
 
-from src.services.replenishment import build_replenishment_context
 from src.services.workflow_models import Role
 from src.ui.components import render_medication_table
 from src.ui.session import (
     get_session_info,
     read_current_availability,
+    read_pharmacist_inventory_context,
     read_request_details,
     read_requests,
     take_notice,
@@ -26,66 +26,90 @@ from src.ui.substitute_panels import (
     render_pharmacist_inventory,
     render_substitute_history,
 )
+from src.services.reporting import prepare_report_display
 
-def _render_stock_context(medications: pd.DataFrame, request: dict) -> dict:
-    """Display current role-permitted inventory and availability context."""
-    selected = medications.loc[medications["medication_id"].eq(request["medication_id"])].copy()
+def _render_stock_context(request: dict) -> dict:
+    """Show current cost-free inventory, coverage and expiry context."""
+    inventory = read_pharmacist_inventory_context(Role.PHARMACIST)
+    selected = inventory.loc[inventory["medication_id"].eq(request["medication_id"])].copy()
+    
     availability = read_current_availability(request["request_id"])
     
     st.subheader("Current recorded availability")
+    
     if availability["comparable"]:
         stock_column, unit_column = st.columns(2)
-        stock_column.metric("Current recorded stock", f"{availability['recorded_stock']:g}")
+
+        stock_column.metric(
+            "Current recorded stock",
+            f"{availability['recorded_stock']:g}",
+        )
         unit_column.metric("Current stock unit", availability["stock_unit"])
+
         if availability["available"]:
-            st.info("Current recorded stock covers the full request. Release still requires an explicit demo review action.")
+            st.info(
+                "Current recorded stock covers the full request. "
+                "Release still requires an explicit demo review action."
+            )
         else:
-            st.warning("Current recorded stock does not cover the full request. This demo does not support partial release.")
+            st.warning(
+                "Current recorded stock does not cover the full request. "
+                "This demo does not support partial release."
+            )
     else:
         st.warning(availability["message"])
-        
+
     if not selected.empty:
-        review = build_replenishment_context(selected).iloc[0]["ordering_review"]
-        render_stock_review_badge(review)
-        
+        render_stock_review_badge(selected.iloc[0]["ordering_review"])
+
         context_columns = [
             "medication_id",
             "medication_name",
             "current_stock",
             "stock_unit",
+            "average_monthly_consumption",
+            "stock_coverage_months",
+            "coverage_note",
             "primary_location",
             "expiry_date",
+            "days_to_representative_expiry",
+            "shelf_life_as_of",
+            "representative_expiry_context",
             "supplier",
             "lead_time_days",
-            "average_monthly_consumption",
             "reorder_point",
             "safety_stock_level",
             "last_count_date",
             "counted_stock",
         ]
-        context = selected.reindex(columns=context_columns).copy()
-        
-        # Presentation-only missing labels. Source/session fields are neither invented nor changed.
-        for column in context.columns:
-            context[column] = context[column].astype("object")
-            context[column] = context[column].where(context[column].notna(), "N/A")
-            
-        render_medication_table(context, title="Representative stock and supply context", export_key="pharmacist_stock_context")
+
+        context = prepare_report_display(selected.reindex(columns=context_columns))
+
+        render_medication_table(
+            context,
+            title="Representative stock and supply context",
+            export_key="pharmacist_stock_context",
+        )
         
     st.caption(
-        "Location, expiry and supply fields are synthetic. "
-        "One representative location/expiry is shown per medication. "
-        "Historical counts do not replace current recorded stock."
+        "Coverage uses supplied average monthly consumption in the medication's stock unit. "
+        "Missing inputs or zero supplied use produce N/A with an explanation."
     )
     st.caption(
-        "Threshold indicators provide inventory context. "
-        "They do not establish clinical suitability or reserve stock."
+        "Expiry context uses the labelled UTC demo start date. "
+        "Negative days mean before that date; zero means on that date. "
+        "No near-expiry threshold or clinical usability decision is applied."
     )
+    st.caption(
+        "Location and supply fields are synthetic. Historical counts do not replace current stock. "
+        "These informational calculations do not reserve stock or authorize release."
+    )
+
     st.write(
         "**Governed ABC/VEN priority:** "
         f"{display_value(request.get('priority_class'))}"
     )
-    
+
     return availability
 
 @st.fragment
@@ -283,7 +307,7 @@ def render_pharmacist_view(medications: pd.DataFrame) -> None:
         else:
             request = read_request_details(selected_request_id, Role.PHARMACIST)
             render_request_details(request, key_prefix="pharmacist_request")
-            availability = _render_stock_context(medications, request)
+            availability = _render_stock_context(request)
             info = get_session_info()
             render_alternative_review(selected_request_id, info.run_id, info.revision)
             _render_review_actions(request, availability)

@@ -16,6 +16,7 @@ from src.ui.components import render_medication_table
 from src.ui.session import (
     get_session_info,
     read_inventory_alternatives,
+    read_pharmacist_inventory_context,
     read_request_alternatives,
     read_substitute_fixture_info,
     read_substitute_reviews,
@@ -30,6 +31,7 @@ from src.ui.workflow_components import (
     display_value,
     render_workflow_table,
 )
+from src.services.reporting import prepare_report_display
 
 HISTORY_LABELS = {
     "review_id": "Demo review ID",
@@ -85,18 +87,45 @@ def attach_inventory_alternatives(medications, role):
     return display
 
 def render_pharmacist_inventory():
-    """Always show the full inventory independently of request selection."""
+    """Always show current inventory and informational review context."""
     render_substitute_notice()
 
-    inventory = read_inventory_alternatives(Role.PHARMACIST)
+    inventory = read_pharmacist_inventory_context(Role.PHARMACIST)
+    inventory = attach_inventory_alternatives(inventory, Role.PHARMACIST)
+    
+    columns = [
+        "medication_id",
+        "medication_name",
+        "current_stock",
+        "stock_unit",
+        "status",
+        "ordering_review",
+        "stock_coverage_months",
+        "coverage_note",
+        "expiry_date",
+        "days_to_representative_expiry",
+        "shelf_life_as_of",
+        "representative_expiry_context",
+        ALTERNATIVES_COLUMN,
+    ]
+    
+    display = prepare_report_display(inventory.reindex(columns=columns))
 
     render_medication_table(
-        inventory,
+        display,
         title="Inventory and illustrative alternatives",
         export_key="pharmacist_inventory_alternatives",
     )
     st.caption(
-        "A dash means this inventory column is filled only for red/yellow stock rows. "
+        "Coverage is an illustrative estimate in months using current recorded stock "
+        "and supplied average monthly use. It is not a predicted stockout date."
+    )
+    st.caption(
+        "Expiry context uses the UTC demo start date shown in the table. "
+        "It does not establish clinically usable stock or apply batch-level FEFO."
+    )
+    st.caption(
+        "A dash in Alternatives means this column is populated only for red/yellow stock rows. "
         "It does not establish whether a clinical alternative exists."
     )
     
