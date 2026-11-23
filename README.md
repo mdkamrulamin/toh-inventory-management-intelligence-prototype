@@ -2,9 +2,9 @@
 
 An academic medication inventory dashboard developed for the University of Ottawa’s ELG 5902 Industry Project, Group 5.
 
-The prototype demonstrates medication availability, synthetic request handoffs, inventory monitoring, simulated ordering and receiving, illustrative alternative review, and reporting.
+The prototype demonstrates medication availability, synthetic request handoffs, inventory monitoring, simulated ordering and receiving, illustrative alternative review, inventory analytics and reporting.
 
-All data are synthetic. Workflow rules, relationships and parameters reflect team research and project assumptions. They do not establish validated TOH policies or real clinical or purchasing decisions.
+All data are synthetic. Workflow rules, relationships and parameters reflect team research and project assumptions. They do not establish validated hospital policies or real clinical or purchasing decisions.
 
 ## Current implementation
 
@@ -13,24 +13,28 @@ The application provides six audience tabs:
 | View | Main functionality |
 | --- | --- |
 | Clinical | Medication lookup, recorded availability, temporary request previews, synthetic request submission, illustrative alternative names and request progress |
-| Pharmacist | Request review, return, release, recall, shortage escalation, post-receipt review and informational alternative-review records |
+| Pharmacist | Explicit request review and routing, stock coverage in months, dated expiry context, post-receipt review and informational alternative-review records |
 | Procurement | Linked shortage feedback, simulated orders, delivery-date updates, eligible cancellation, supplier/cost context and inventory analytics |
-| Warehouse | Released-request fulfillment, full/partial synthetic receipts, order and receipt history, stock/location/expiry information and historical counts |
-| Executive | Aggregate summaries of current session inventory |
-| Reporting | Filtered inventory, analytics and request reports with native CSV exports |
+| Warehouse | Released-request fulfillment, full/partial synthetic receipts, receipt history, stock/location/expiry context, historical counts and session stock movements |
+| Executive | Aggregate inventory values, availability counts, threshold-review counts, monthly consumption value and financial ABC category totals |
+| Reporting | Filtered inventory, analytics, request, order and receipt reports with native CSV exports |
 
 Shared features include readable stock indicators, charts separated by stock unit, persistent table tools, illustrated navigation and institutional header images.
 
-Tabs provide demonstration navigation. They do not authenticate users or enforce real access restrictions.
+Views present role-appropriate information. Pharmacist and Warehouse omit monetary cost fields, while Executive receives aggregate summaries. Tabs provide demonstration navigation and do not authenticate users or enforce real access restrictions.
 
 The synthetic workflow supports:
 
 - **Available stock:** Clinical submits a request → Pharmacist explicitly reviews and authorizes demo release → Warehouse confirms full fulfillment.
 - **Insufficient stock:** Pharmacist escalates a shortage → Procurement records feedback and confirms a simulated order → Warehouse records a receipt → Pharmacist explicitly reviews the request again → Warehouse fulfills it after valid release and sufficient stock.
 
-Temporary previews do not create requests. Request submission, review, release and order creation do not reserve or deduct stock. Confirmed receipts increase active session stock; valid fulfillment deducts the full requested quantity once.
+Clinical Preview and submission validate the entered positive whole-number quantity. Invalid quantities do not create requests. Temporary previews do not save requests, and editing a preview does not change an already submitted request.
+
+Request submission, review, release and order creation do not reserve or deduct stock. Confirmed receipts increase active session stock; valid fulfillment deducts the full requested quantity once.
 
 Orders support partial receipts and retained history. A receipt does not automatically authorize release or fulfill a request. Closing a request without fulfillment does not automatically cancel its linked order. Fulfilled requests close with a retained fulfilled outcome.
+
+Warehouse movements show each posted receipt and completed fulfillment once, with linked identifiers, signed quantities, stock units, recorded before/after balances and UTC timestamps. These observations remain unchanged when later transactions update current stock.
 
 The **Alternatives (illustrative)** column shows recorded candidate names for red/yellow inventory rows. Pharmacist review provides detailed candidate information and three informational decisions:
 
@@ -38,17 +42,23 @@ The **Alternatives (illustrative)** column shows recorded candidate names for re
 - Do not pursue in demo.
 - Needs more review.
 
-Each decision requires a reason and records an inventory snapshot. Decisions do not change the requested medication, quantity, urgency, workflow status or stock. Candidate availability follows live session inventory; earlier review snapshots remain unchanged. No clinical equivalence, dose conversion or automatic substitution is provided.
+Each decision requires a reason and records an inventory snapshot. Decisions do not change the requested medication, quantity, urgency, workflow status or stock. Candidate availability follows active session inventory; earlier review snapshots remain unchanged. No clinical equivalence, dose conversion or automatic substitution is provided.
 
-Supported analytics include illustrative financial ABC classification, monthly consumption-value analysis, stock coverage, gap below supplied reorder point and illustrative lead-time demand. Supplied reorder points, safety-stock quantities and lead times remain distinct from calculated outputs. Financial ABC is not clinical priority.
+Supported analytics include illustrative financial ABC classification, monthly consumption-value analysis, stock coverage in months, gap below supplied reorder point and illustrative lead-time demand. Supplied reorder points, safety-stock quantities and lead times remain distinct from calculated outputs. Financial ABC does not establish clinical priority.
 
-Reporting includes inventory snapshots, zero-stock records, replenishment context, supplier/cost information, expiry overviews, historical counts, inventory summaries, current requests, request summaries, stock analytics and ABC category totals.
+Representative expiry context uses dates supplied in the medication CSV and the demo session’s UTC start date. It displays before/on/after-date context and days relative to that reference. It does not apply a near-expiry threshold or determine clinical usability.
 
-Inventory summaries follow their selected filters. ABC classification retains the full medication-population basis before display filtering. Whole-population ABC totals and whole-session request summaries use their stated overall scope.
+Reporting includes inventory snapshots, zero-stock records, replenishment context, supplier/cost information, expiry overviews, historical counts, inventory summaries, current requests, request summaries, stock analytics, ABC category totals, synthetic orders and posted receipts.
+
+Inventory reports follow their selected filters. ABC classification retains the complete medication-population basis before display filtering. Whole-population ABC totals and whole-session request summaries retain their stated overall scope.
+
+Order and receipt reports use separate transaction filters. Order date filters refer to the recorded order date; receipt date filters refer to the recorded receipt date in UTC. Table exports contain the prepared report content and its scope information.
 
 Normal reruns and role navigation retain submitted records within the active session. Leaving Clinical clears its medication lookup and temporary preview.
 
-**Reset demo** restores starting inventory, clears requests, orders, receipts, alternative-review records and related inputs, and reloads the relationship fixture. Session data may be lost after browser refresh, disconnection or server restart. Separate browser sessions do not share transactions. Source CSV files are not changed by workflow actions.
+**Reset demo** restores starting inventory, clears requests, orders, receipts, alternative-review records and related inputs, and reloads the relationship fixture. Movement displays clear with their underlying transactions.
+
+Session data are temporary and may be lost after browser refresh, disconnection or server restart. Separate browser sessions do not share transactions. Source CSV files are not changed by workflow actions.
 
 ## Demonstration datasets
 
@@ -62,9 +72,11 @@ The extended medication dataset is the default. It preserves the original medica
 
 Each medication record has one representative expiry date and, where supplied, a storage location. Multiple batches and simultaneous storage locations are not modeled. Historical counts remain separate from current recorded stock.
 
+Expiry dates, stock quantities, consumption values, costs, suppliers, locations and count observations are fictional demonstration inputs.
+
 The relationship fixture contains unvalidated demonstration links between existing medication IDs. Relationships are directional; one direction does not imply the reverse. Missing relationships are shown as unavailable recorded information rather than invented suggestions.
 
-Validated relationships remain fixed within a demo run. Editing the fixture requires a reset or new demonstration before its new contents are used.
+Fixture validation checks data consistency, not clinical equivalence. Accepted fixture records remain fixed within a demo run. Editing the fixture requires a reset or new demonstration before its new contents are used.
 
 ### Field definitions
 
@@ -77,9 +89,9 @@ Validated relationships remain fixed within a demo run. Editing the fixture requ
 | `current_stock` | Recorded quantity in the medication’s stock unit |
 | `unit_cost` | Synthetic CAD cost per stock unit |
 | `average_monthly_consumption` | Supplied synthetic average monthly use in stock units |
-| `expiry_date` | Representative expiry date |
+| `expiry_date` | Fictional representative expiry date |
 | `supplier` | Fictional supplier |
-| `status` | Availability label derived from recorded stock |
+| `status` | Recorded availability label, checked against stock |
 | `primary_location` | Optional representative storage location |
 | `reorder_point` | Optional supplied illustrative reorder threshold |
 | `safety_stock_level` | Optional supplied illustrative safety-stock quantity |
@@ -106,7 +118,9 @@ Relationship validation checks identifiers, directed pairs, required wording, pr
 
 Workflow services validate positive whole-number transaction quantities, matching units, eligible statuses and current session context. Invalid, stale or duplicate actions are rejected without partial changes.
 
-Tables and reports use display copies. Recorded stock does not establish physical stock confirmation, clinical suitability or usable expiry. Historical count comparisons do not establish loss, shrinkage or physical reconciliation.
+Missing inputs remain unavailable. Zero supplied monthly use does not produce a fabricated coverage value. Incomplete inputs prevent complete-population ABC totals and classes from being presented as valid results.
+
+Tables and reports use display copies. Recorded stock does not establish physical stock confirmation, clinical suitability or usable expiry. Historical count comparisons and session movements do not establish loss, shrinkage or physical reconciliation.
 
 ## Requirements
 
@@ -175,9 +189,9 @@ The relationship fixture is configured separately:
 SUBSTITUTE_RELATIONSHIPS_PATH = PROJECT_ROOT / "data" / "sample_substitute_relationships.csv"
 ```
 
-Stop and restart Streamlit after changing the configured medication dataset. Start a fresh demonstration when prompted.
+Stop and restart Streamlit after changing the configured medication dataset. If prompted, choose **Start new demo with configured dataset**.
 
-Both medication datasets support the same synthetic workflow. Fields absent from the original dataset remain unavailable. Positive stock without a supplied reorder point has a neutral threshold indicator; zero recorded stock retains its zero-stock indicator.
+Both medication datasets support the synthetic workflow, coverage, expiry context and financial ABC analysis. Fields absent from the original dataset remain unavailable. Positive stock without a supplied reorder point has a neutral threshold indicator; zero recorded stock retains its zero-stock indicator.
 
 ### Verify dataset shapes
 
@@ -204,24 +218,29 @@ Extended: (6, 16)
 | `src/config.py` | Labels, notices, icon mappings and data paths |
 | `src/data/schema.py`, `src/data/loader.py` | Medication schema, mapping and validation |
 | `src/data/substitute_schema.py`, `src/data/substitute_loader.py` | Relationship contracts and fixture validation |
-| `src/services/clinical.py` | Temporary request-stock comparison |
+| `src/services/clinical.py` | Quantity validation and temporary request-stock comparisons |
 | `src/services/replenishment.py` | Shared inventory threshold indicators |
-| `src/services/analytics.py` | Supported stock analytics and financial ABC classification |
-| `src/services/summary.py` | Aggregate inventory summaries |
+| `src/services/analytics.py` | Stock analytics, financial ABC and cost-free coverage preparation |
+| `src/services/summary.py` | Inventory snapshot summaries |
+| `src/services/executive_summary.py` | Prepared aggregate-only Executive summaries |
+| `src/services/expiry.py` | Shared representative expiry and demo reference-date context |
 | `src/services/workflow_models.py` | Shared session and transaction contracts |
 | `src/services/workflow.py` | Request transitions, release, fulfillment and reset |
-| `src/services/workflow_queries.py` | Read-only role-specific inventory and request queries |
-| `src/services/orders.py`, `src/services/order_queries.py` | Simulated orders and role-specific order readers |
+| `src/services/workflow_queries.py` | Read-only role projections and inventory/request context |
+| `src/services/orders.py`, `src/services/order_queries.py` | Simulated orders and role-specific readers |
 | `src/services/receipts.py`, `src/services/receipt_queries.py` | Synthetic receipt posting and readers |
+| `src/services/stock_movements.py` | Recorded receipt and fulfillment movements |
 | `src/services/substitute_reviews.py`, `src/services/substitute_queries.py` | Informational alternative reviews and readers |
-| `src/services/reporting.py` | Report preparation and filtering |
+| `src/services/reporting.py` | Inventory/request reports, filtering and display preparation |
+| `src/services/transaction_reports.py` | Current-session order and receipt reports |
 | `src/ui/session.py` | Shared Streamlit session-state boundary |
 | `src/ui/workflow_actions.py`, `src/ui/handoff_panels.py` | Request and handoff controls |
 | `src/ui/order_actions.py`, `src/ui/order_panels.py` | Simulated-order controls |
 | `src/ui/receipt_actions.py`, `src/ui/receipt_panels.py` | Synthetic-receipt controls |
-| `src/ui/substitute_actions.py`, `src/ui/substitute_panels.py` | Alternative information, review controls and history |
-| `src/ui/components.py` | Inventory tables, stock charts and placeholders |
-| `src/ui/workflow_components.py` | Shared request, order and receipt presentation |
+| `src/ui/movement_panels.py` | Warehouse stock-movement table |
+| `src/ui/substitute_actions.py`, `src/ui/substitute_panels.py` | Alternative information, Pharmacist inventory context and review history |
+| `src/ui/components.py` | Reusable medication tables and stock charts |
+| `src/ui/workflow_components.py` | Shared workflow tables and transaction presentation |
 | `src/ui/views/` | Six audience view modules |
 | `src/ui/navigation.py` | Role navigation and Clinical lookup reset |
 | `src/ui/styles.py`, `src/ui/styles.css` | Shared presentation |
@@ -255,6 +274,12 @@ python -m unittest discover -s tests -p "test_loader.py" -v
 python -m unittest discover -s tests -p "test_clinical.py" -v
 ```
 
+### Clinical quantity and submission tests
+
+```bash
+python -m unittest discover -s tests -p "test_clinical_quantity.py" -v
+```
+
 ### Replenishment-review tests
 
 ```bash
@@ -271,6 +296,7 @@ python -m unittest discover -s tests -p "test_navigation.py" -v
 
 ```bash
 python -m unittest discover -s tests -p "test_summary.py" -v
+python -m unittest discover -s tests -p "test_executive_summary.py" -v
 ```
 
 ### Stock analytics tests
@@ -278,6 +304,18 @@ python -m unittest discover -s tests -p "test_summary.py" -v
 ```bash
 python -m unittest discover -s tests -p "test_analytics.py" -v
 python -m unittest discover -s tests -p "test_analytics_integration.py" -v
+```
+
+### Expiry context tests
+
+```bash
+python -m unittest discover -s tests -p "test_expiry_context.py" -v
+```
+
+### Pharmacist context tests
+
+```bash
+python -m unittest discover -s tests -p "test_pharmacist_context.py" -v
 ```
 
 ### Shared workflow tests
@@ -327,6 +365,12 @@ python -m unittest discover -s tests -p "test_receipt_queries_session.py" -v
 python -m unittest discover -s tests -p "test_receipt_actions.py" -v
 ```
 
+### Stock-movement tests
+
+```bash
+python -m unittest discover -s tests -p "test_stock_movements.py" -v
+```
+
 ### Illustrative alternative and review tests
 
 ```bash
@@ -340,6 +384,7 @@ python -m unittest discover -s tests -p "test_substitute_actions.py" -v
 
 ```bash
 python -m unittest discover -s tests -p "test_reporting.py" -v
+python -m unittest discover -s tests -p "test_transaction_reports.py" -v
 ```
 
 ### Run one test method
@@ -356,7 +401,9 @@ Browser layout, scrolling, live input, cross-role navigation and actual CSV down
 
 The prototype draws on the team’s literature review, medication-process analysis, inventory frameworks and dashboard requirements.
 
-Supporting project documents distinguish research findings, implementation choices, team assumptions and deferred functionality. Illustrative relationships, workflow rules and supplied inventory parameters do not establish validated TOH policies or clinical eligibility.
+Supporting research, process maps and acceptance records are maintained separately by the team. These distinguish research findings, implementation choices, project assumptions and deferred functionality.
+
+Illustrative relationships, workflow rules and supplied inventory parameters do not establish validated hospital policies, clinical eligibility or purchasing recommendations.
 
 ## Deferred features and scope limitations
 
@@ -366,13 +413,15 @@ The prototype does not provide:
 - Clinically validated alternative relationships, dose conversion or a substitute offer/acceptance workflow.
 - Authentication, enforced user permissions or durable multi-user transaction storage.
 - Real supplier orders, supplier integrations or verified physical shipment receiving.
-- Receipt reversal/correction, multi-location transfers, batch-level FEFO or physical dispensing.
-- Confirmed stock accuracy, reconciliation, loss or shrinkage.
+- Physical inspection, quarantine, putaway, picking or dispatch verification.
+- Receipt reversal/correction, multi-location transfers or batch-level FEFO.
+- A complete historical inventory ledger or confirmed physical reconciliation, loss or shrinkage.
+- Automatic availability notifications or configured notification delivery.
 - Governed clinical VEN classification, calculated safety stock or optimized reorder quantities.
 - Historical hospital performance, supplier reliability, inventory turnover or validated cost savings.
-- Live TOH/ERP integration, demand forecasting or AI functionality.
+- Live hospital/ERP integration, demand forecasting or AI functionality.
 
-Synthetic receipts and fulfillment affect only active session inventory. Representative expiry dates, past counts and illustrative delivery dates are not physical verification or clinical suitability assessments.
+Synthetic receipts and fulfillment affect only active session inventory. Representative expiry dates, historical counts, illustrative delivery dates and stock-coverage values do not establish physical verification or clinical suitability.
 
 ## Assets and credits
 
