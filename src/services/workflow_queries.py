@@ -11,7 +11,7 @@ import pandas as pd
 
 from src.services.clinical import build_clinical_request_preview
 from src.services.replenishment import build_replenishment_context
-from src.services.summary import summarize_inventory
+from src.services.executive_summary import build_executive_summary
 from src.services.workflow_models import (
     DemoState,
     RequestOutcome,
@@ -345,8 +345,8 @@ def get_current_availability(state: DemoState, request_id: str) -> dict:
     return result
 
 def get_inventory_summary(state: DemoState) -> dict:
-    """Reuse the existing Executive calculations on active inventory."""
-    return deepcopy(summarize_inventory(state.inventory))
+    """Return prepared Executive aggregates from active session inventory."""
+    return deepcopy(build_executive_summary(state.inventory))
 
 def get_replenishment_review(state: DemoState) -> pd.DataFrame:
     """Recalculate review context from current session stock."""
