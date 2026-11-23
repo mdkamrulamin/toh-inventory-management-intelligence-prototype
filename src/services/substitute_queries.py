@@ -6,7 +6,6 @@ They do not record decisions, alter stock or change workflow status.
 
 from copy import deepcopy
 from dataclasses import asdict
-from datetime import datetime
 
 import pandas as pd
 
@@ -20,6 +19,10 @@ from src.services.workflow_models import (
     RequestStatus,
     Role,
     WorkflowError,
+)
+from src.services.expiry import (
+    demo_reference_date,
+    describe_representative_expiry,
 )
 
 ALTERNATIVES_COLUMN = "alternatives_illustrative"
@@ -170,24 +173,15 @@ def _stock_details(state, medication_id, as_of):
     """Explicit comparison fields; costs and valuation are excluded."""
     row = wf._medication(state, medication_id)
     snapshot = reviews._candidate_snapshot(state, medication_id)
-
-    expiry_value = row.get("expiry_date")
-    expiry = None
-
-    if expiry_value is not None and not pd.isna(expiry_value):
-        try:
-            expiry = pd.Timestamp(expiry_value).date()
-        except (TypeError, ValueError, OverflowError):
-            expiry = None
+            
+    expiry_context = describe_representative_expiry(row.get("expiry_date"), as_of=as_of)
 
     return {
         "medication_id": medication_id,
         "medication_name": row["medication_name"],
         "category": _text_or_none(row.get("category")),
         **asdict(snapshot),
-        "expiry_date": None if expiry is None else expiry.isoformat(),
-        "days_to_representative_expiry": None if expiry is None else (expiry - as_of).days,
-        "shelf_life_as_of": as_of.isoformat(),
+        **expiry_context,
         "primary_location": _text_or_none(row.get("primary_location")),
         "supplier": _text_or_none(row.get("supplier")),
         "lead_time_days": wf._optional_number(row, "lead_time_days"),
@@ -200,7 +194,7 @@ def get_request_alternatives(state, request_id, role) -> dict:
     request = wf._request(state, request_id)
 
     # A labelled session date keeps shelf-life context reproducible.
-    as_of = datetime.fromisoformat(state.started_time).date()
+    as_of = demo_reference_date(state.started_time)
     source = _stock_details(state, request.medication_id, as_of)
     fixture_info = get_fixture_info(state)
 

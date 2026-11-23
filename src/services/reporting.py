@@ -22,6 +22,7 @@ from src.services.replenishment import (
 from src.services.summary import summarize_inventory
 from src.services.workflow_models import RequestStatus
 from src.services.analytics import build_stock_analytics
+from src.services.expiry import add_representative_expiry_context
 
 REPORT_LABELS = {
     "inventory_snapshot": "Inventory snapshot",
@@ -91,7 +92,11 @@ INVENTORY_COLUMNS = {
         "current_stock",
         "stock_unit",
         "expiry_date",
+        "days_to_representative_expiry",
+        "shelf_life_as_of",
+        "representative_expiry_context",
         "primary_location",
+        "expiry_context_note",
     ),
     "historical_counts": (
         "medication_id",
@@ -151,7 +156,8 @@ REPORT_NOTES = {
         "Synthetic suppliers and CAD unit costs; no supplier transaction or hospital cost-saving claim."
     ),
     "expiry_overview": (
-        "One representative expiry/location per medication. No batch-level FEFO or clinical usability decision."
+        "One representative expiry/location per medication. Calendar-date context uses the labelled reference date. "
+        "No near-expiry threshold, batch-level FEFO or clinical usability decision is applied."
     ),
     "inventory_summary": (
         "Current filtered inventory selection. Physical stock units are not combined into one quantity."
@@ -323,7 +329,13 @@ def _annotate(frame: pd.DataFrame, report_id: str) -> pd.DataFrame:
     result["report_note"] = REPORT_NOTES[report_id]
     return result
 
-def build_inventory_report(medications: pd.DataFrame, report_id: str, *, filters: InventoryFilters | None = None) -> pd.DataFrame:
+def build_inventory_report(
+    medications: pd.DataFrame, 
+    report_id: str, 
+    *, 
+    filters: InventoryFilters | None = None,
+    as_of: date | None = None,
+) -> pd.DataFrame:
     """Build a supported report from the current inventory selection."""
     if report_id not in INVENTORY_REPORT_IDS:
         raise ValueError("Unsupported inventory report.")
@@ -349,6 +361,9 @@ def build_inventory_report(medications: pd.DataFrame, report_id: str, *, filters
         if report_id in analytics_reports else medications
     )
     selected = filter_inventory(source, filters)
+    
+    if report_id == "expiry_overview":
+        selected = add_representative_expiry_context(selected, as_of=as_of)
     
     if report_id == "stock_analytics":
         selected = selected.sort_values(

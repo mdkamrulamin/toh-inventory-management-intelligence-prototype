@@ -27,6 +27,7 @@ from src.services.workflow_models import (
 )
 from src.ui.components import render_medication_table
 from src.ui.session import (
+    read_demo_reference_date,
     read_orders,
     read_receipts,
     read_request_summary,
@@ -556,6 +557,11 @@ def render_reporting_view(medications: pd.DataFrame) -> None:
                     medications,
                     report_id,
                     filters=inventory_filters,
+                    as_of=(
+                        read_demo_reference_date()
+                        if report_id == "expiry_overview"
+                        else None
+                    ),
                 )
 
                 if report_id == "stock_analytics":

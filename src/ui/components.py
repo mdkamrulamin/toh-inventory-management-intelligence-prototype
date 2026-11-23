@@ -16,6 +16,7 @@ from src.services.substitute_queries import (
     ALTERNATIVES_HELP,
     ALTERNATIVES_COLUMN,
 )
+from src.services.expiry import EXPIRY_CONTEXT_COLUMNS
 
 def render_medication_table(
     medications: pd.DataFrame,
@@ -52,6 +53,14 @@ def render_medication_table(
             display_medications["stock_unit"].astype("string").str.strip()
             .replace("", pd.NA).fillna("N/A")
         )
+        
+    # Format only the display/export copy. Missing context remains N/A;
+    # zero days remains an explicit zero.
+    for column in EXPIRY_CONTEXT_COLUMNS:
+        if column in display_medications.columns:
+            display_medications[column] = (
+                display_medications[column].astype("string").fillna("N/A")
+            )
     
     #Rename columns in the display copy
     display_medications = display_medications.rename(columns=FIELD_LABELS)

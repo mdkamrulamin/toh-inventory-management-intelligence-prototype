@@ -37,6 +37,8 @@ from src.data.substitute_loader import load_substitute_relationships
 from src.services import substitute_queries
 from src.services import substitute_reviews as substitute_review_services
 from src.services import stock_movements
+from src.services.expiry import demo_reference_date
+
 
 STATE_KEY = "demo_state"
 NOTICE_KEY = "workflow_notice"
@@ -417,3 +419,13 @@ def read_substitute_reviews(role: Role | str, *, request_id: str | None = None, 
 def read_stock_movements(role: Role | str, *, state_store: MutableMapping | None = None):
     """Read detached movement records without changing session state."""
     return stock_movements.get_stock_movements(_current(_store(state_store)), role)
+
+def read_demo_reference_date(*, state_store: MutableMapping | None = None):
+    """Return the active demo's recorded UTC reference date."""
+    state = _current(_store(state_store))
+    return demo_reference_date(state.started_time)
+
+def read_inventory_expiry_context(role: Role | str, *, state_store: MutableMapping | None = None):
+    """Read detached inventory with shared representative expiry context."""
+    return queries.get_inventory_expiry_context(_current(_store(state_store)), role)
+    

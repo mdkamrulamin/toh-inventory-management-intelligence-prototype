@@ -13,6 +13,11 @@ from src.ui.handoff_panels import render_warehouse_handoffs
 from src.ui.stock_indicators import render_stock_review_legend
 from src.ui.order_panels import render_warehouse_orders
 from src.ui.movement_panels import render_stock_movements
+from src.services.workflow_models import Role
+from src.ui.session import (
+    read_demo_reference_date,
+    read_inventory_expiry_context,
+)
 
 def render_warehouse_view(medications: pd.DataFrame) -> None:
         """Show Warehouse handoffs and current session inventory."""
@@ -31,11 +36,18 @@ def render_warehouse_view(medications: pd.DataFrame) -> None:
             "stock_unit",
             "primary_location",
             "expiry_date",
+            "days_to_representative_expiry",
+            "shelf_life_as_of",
+            "representative_expiry_context",
             "status",
         ]
         
         # Reindex adds missing optional columns without changing source data.
-        warehouse_data = medications.reindex(columns=warehouse_columns).copy()
+        warehouse_data = (
+            read_inventory_expiry_context(Role.WAREHOUSE)
+            .reindex(columns=warehouse_columns).copy()
+        )
+        
         
         # Reuse the same medication-level review result as Procurement.
         review_by_id = (
@@ -58,11 +70,16 @@ def render_warehouse_view(medications: pd.DataFrame) -> None:
         else:
             warehouse_data["expiry_date"] = "N/A"
         
+        reference_date = read_demo_reference_date()
+
         st.caption(
-            "Locations and expiry dates are synthetic. Each medication record "
-            "has one representative location and expiry date; "
-            "multiple lots and batch-level FEFO are not represented."      
+            f"Expiry reference: {reference_date.isoformat()} (demo start date, UTC). "
+            "Negative days mean before the reference date; zero means on that date."
         )
+        st.caption(
+            "Locations and expiry dates are synthetic. Each medication has one representative location and expiry date. "
+            "No near-expiry threshold, batch-level FEFO or clinical usability decision is applied."
+        )        
         
         render_medication_table(
             warehouse_data, 
@@ -107,13 +124,6 @@ def render_warehouse_view(medications: pd.DataFrame) -> None:
             export_key="warehouse_counts",
         )
         render_stock_chart(medications, key_prefix="warehouse")
-        
-        
-        render_feature_placeholder(
-            "Expiry monitoring",
-            "The warning period and supporting lot-level information remain "
-            "to be confirmed. No batch-specific expiry or FEFO decision is made.",
-        )
         
         render_feature_placeholder(
             "Physical receiving and picking checks",

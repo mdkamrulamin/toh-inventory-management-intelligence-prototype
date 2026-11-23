@@ -121,6 +121,10 @@ FIELD_LABELS: dict[str, str] = {
     "total_monthly_consumption_value_cad": "Full-population monthly consumption value (CAD/month)",
     "sku_count": "Medication SKUs",
     "alternatives_illustrative": "Alternatives (illustrative)",
+    "days_to_representative_expiry": "Days to representative expiry",
+    "shelf_life_as_of": "Demo reference date (UTC)",
+    "representative_expiry_context": "Representative expiry context",
+    "expiry_context_note": "Expiry context limitations",
 }
 
 # Resolve data paths from project loc

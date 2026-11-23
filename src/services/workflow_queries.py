@@ -22,6 +22,10 @@ from src.services.workflow_models import (
     WorkflowError,
 )
 from src.services.order_queries import get_order_details
+from src.services.expiry import (
+    add_representative_expiry_context,
+    demo_reference_date,
+)
 
 INVENTORY_COLUMNS = (
     "medication_id",
@@ -391,6 +395,17 @@ def get_session_request_summary(state: DemoState) -> dict:
         ),
         "by_status": by_status,
     }
+    
+def get_inventory_expiry_context(state: DemoState, role: Role | str) -> pd.DataFrame:
+    """Attach shared expiry context to an existing role projection."""
+    role = _role(role)
+    
+    if role not in {Role.PHARMACIST, Role.WAREHOUSE, Role.REPORTING}:
+        raise WorkflowError("wrong_role", "This view does not receive representative expiry context.")
+    
+    inventory = get_inventory_snapshot(state, role)
+    
+    return add_representative_expiry_context(inventory, as_of=demo_reference_date(state.started_time))
     
     
     
