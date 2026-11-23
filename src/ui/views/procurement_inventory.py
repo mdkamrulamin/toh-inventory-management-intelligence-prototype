@@ -11,7 +11,6 @@ from src.services.analytics import (
 )
 from src.services.reporting import prepare_report_display
 from src.ui.components import (
-    render_feature_placeholder,
     render_medication_table, 
     render_stock_chart,
 )
@@ -153,11 +152,11 @@ def render_procurement_inventory_view(medications: pd.DataFrame) -> None:
     
     
     
-    render_feature_placeholder(
-        "Replenishment-method selection",
-        "N/A: calculated safety stock, optimized reorder points, "
-        "EOQ and Newsvendor recommendations require additional inputs "
-        "and agreed models. Supplied parameters are preserved. "
-        "No purchase order is created.",
+    st.caption(
+        "N/A: calculated safety stock, optimized reorder points "
+        "and EOQ/Newsvendor recommendations. Required demand history, "
+        "ordering/holding costs and agreed model assumptions are "
+        "unavailable. Synthetic orders use the explicit order "
+        "controls above."
     )
     

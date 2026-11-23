@@ -120,7 +120,7 @@ def render_stock_chart(medications: pd.DataFrame, key_prefix: str = "inventory")
     if (~has_unit).any():
         st.info(
             "Records without a stock unit remain in the tables but are omitted from stock charts."
-            " No pysical unit is assumed."
+            " No physical unit is assumed."
         )
     chart_context = chart_context.loc[has_unit].copy()
     chart_context["stock_unit"] = units.loc[has_unit]
@@ -217,8 +217,3 @@ def render_stock_chart(medications: pd.DataFrame, key_prefix: str = "inventory")
             width="stretch",
             key=f"{key_prefix}_stock_{stock_unit}",
         )
-        
-def render_feature_placeholder(title: str, description: str) -> None:
-    """Display a clearly labelled section awaiting info or implementation"""
-    st.subheader(title)
-    st.info(f"N/A - illustrative placeholder. {description}")

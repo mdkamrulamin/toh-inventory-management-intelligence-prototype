@@ -5,7 +5,6 @@ import streamlit as st
 
 from src.services.replenishment import build_replenishment_context
 from src.ui.components import (
-    render_feature_placeholder,
     render_medication_table, 
     render_stock_chart,
 )
@@ -125,11 +124,9 @@ def render_warehouse_view(medications: pd.DataFrame) -> None:
         )
         render_stock_chart(medications, key_prefix="warehouse")
         
-        render_feature_placeholder(
-            "Physical receiving and picking checks",
-            "Synthetic order-linked receipt posting is implemented. "
-            "Physical inspection, quarantine, batch capture, putaway, "
-            "picking and dispatch verification remain outside this demo.",
+        st.caption(
+            "Physical inspection, quarantine, batch handling, putaway "
+            "and picking/dispatch verification are outside this synthetic workflow."
         )
         
         render_stock_movements()

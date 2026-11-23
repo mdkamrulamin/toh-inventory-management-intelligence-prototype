@@ -52,12 +52,12 @@ ROLE_CONTEXT: dict[str, str] = {
         "physical count and reconciliation."
     ),
     "executive": (
-        "Process context: overall inventory performance monitoring "
-        "and policy review."
+        "Process context: synthetic receipts, representative storage "
+        "and expiry context, demo fulfillment and session stock movements."
     ),
     "reporting": (
-        "Process context: consolidated synthetic inventory reports, "
-        "replenishment context and current demo request information. "
+        "Process context: consolidated synthetic inventory, analytics "
+        "and current-session request, order and receipt reports. "
         "This tab does not enforce authenticated access restrictions."
     ),
 }

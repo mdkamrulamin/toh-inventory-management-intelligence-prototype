@@ -584,11 +584,8 @@ def render_reporting_view(medications: pd.DataFrame) -> None:
     _render_report_table(report, report_id)
 
     st.info(
-        "N/A: demand forecasting, calculated safety stock, optimized "
-        "reorder points, EOQ/Newsvendor recommendations, clinical VEN "
-        "classification, inventory turnover, historical hospital "
-        "stockout or consumption trends, supplier performance, "
-        "confirmed shrinkage, hospital cost savings and patient "
-        "outcomes. Required historical records, model inputs "
-        "or governed definitions are unavailable."
+        "N/A: forecasting, optimized replenishment, clinical VEN "
+        "classification and historical performance/trend measures. "
+        "Required historical records, model inputs and governed "
+        "definitions are unavailable."
     )

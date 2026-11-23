@@ -10,10 +10,7 @@ from src.services.clinical import (
 from src.services.replenishment import build_replenishment_context
 from src.services.substitute_queries import ALTERNATIVES_COLUMN
 from src.services.workflow_models import Role
-from src.ui.components import (
-    render_feature_placeholder,
-    render_medication_table,
-)
+from src.ui.components import render_medication_table
 from src.ui.session import (
     get_session_info,
     read_request_details,
@@ -304,17 +301,8 @@ def render_clinical_view(medications: pd.DataFrame) -> None:
         _render_request_form(selected_medication, stock_unit, has_unit=has_unit)
 
     _render_session_requests()
-
-    st.subheader("Illustrative alternatives (information only)")
-    st.caption(
-        "Recorded relationships appear in the inventory table "
-        "for red/yellow stock rows. They are synthetic and unvalidated. "
-        "No substitute has been recommended, offered or approved."
-    )
     
-    render_feature_placeholder(
-        "Availability alerts",
-        "Alert thresholds remain to be confirmed. "
-        "Displayed availability reflects recorded stock quantities only; "
-        "it does not establish clinical suitability or usable expiry.",
+    st.caption(
+        "Automatic availability notifications are unavailable: "
+        "notification rules and delivery are not configured."
     )
