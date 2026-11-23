@@ -12,6 +12,7 @@ from src.ui.components import (
 from src.ui.handoff_panels import render_warehouse_handoffs
 from src.ui.stock_indicators import render_stock_review_legend
 from src.ui.order_panels import render_warehouse_orders
+from src.ui.movement_panels import render_stock_movements
 
 def render_warehouse_view(medications: pd.DataFrame) -> None:
         """Show Warehouse handoffs and current session inventory."""
@@ -121,11 +122,5 @@ def render_warehouse_view(medications: pd.DataFrame) -> None:
             "picking and dispatch verification remain outside this demo.",
         )
         
-        render_feature_placeholder(
-            "Stock movement and reconciliation",
-            "This session records order-linked synthetic receipts "
-            "and request-linked fulfillment. Transfers, a complete "
-            "historical ledger and physical count reconciliation "
-            "require additional records and agreed workflows.",
-        )
+        render_stock_movements()
         

@@ -27,6 +27,8 @@ from src.services.workflow_models import (
 )
 from src.ui.components import render_medication_table
 from src.ui.session import (
+    read_orders,
+    read_receipts,
     read_request_summary,
     read_requests,
 )
@@ -34,6 +36,15 @@ from src.ui.workflow_components import (
     OUTCOME_LABELS,
     render_workflow_table,
     status_label,
+)
+from src.services.order_queries import ORDER_STATUS_LABELS
+from src.services.transaction_reports import (
+    DATE_FILTER_BASIS,
+    TRANSACTION_REPORT_LABELS,
+    TRANSACTION_REPORT_NOTES,
+    TransactionFilters,
+    build_transaction_report,
+    prepare_transaction_report_display,
 )
 
 
@@ -50,6 +61,60 @@ FILTER_KEYS = {
     "request_outcomes": "workflow_ui_reporting_request_outcomes",
 }
 
+VIEW_REPORT_LABELS = {
+    **REPORT_LABELS,
+    **TRANSACTION_REPORT_LABELS,
+}
+
+VIEW_REPORT_NOTES = {
+    **REPORT_NOTES,
+    **TRANSACTION_REPORT_NOTES,
+}
+
+# Separate keys prevent order and receipt filters from interfering
+# with each other or with the existing inventory/request filters.
+TRANSACTION_FILTER_KEYS = {
+    report_id: {
+        field: f"workflow_ui_reporting_{report_id}_{field}"
+        for field in (
+            "medication_ids",
+            "order_ids",
+            "request_ids",
+            "statuses",
+            "date_from",
+            "date_to",
+        )
+    }
+    for report_id in TRANSACTION_REPORT_LABELS
+}
+
+TRANSACTION_FIELD_LABELS = {
+    "order_id": "Order ID",
+    "receipt_id": "Receipt ID",
+    "linked_request_id": "Linked request ID",
+    "order_status": "Order status",
+    "request_status": "Current linked request status",
+    "receipt_status": "Receipt status",
+    "ordered_quantity": "Ordered quantity",
+    "quantity_received": "Total received quantity",
+    "quantity_outstanding": "Outstanding quantity",
+    "received_quantity": "Receipt quantity",
+    "unit": "Stock unit",
+    "order_date": "Recorded order date",
+    "expected_delivery": "Illustrative expected delivery",
+    "expected_delivery_note": "Expected delivery context",
+    "created_time": "Order created time (UTC)",
+    "updated_time": "Order updated time (UTC)",
+    "received_time": "Receipt recorded time (UTC)",
+    "stock_before": "Recorded stock before receipt",
+    "stock_after": "Recorded stock after receipt",
+    "recorded_by": "Demo actor",
+    "recorded_by_role": "Demo actor role",
+    "provenance": "Record provenance",
+    "date_filter_basis": "Date filter basis",
+    "report_scope": "Applied report filters",
+}
+
 
 def _clear_report_filters() -> None:
     """Clear presentation inputs without changing inventory or requests."""
@@ -59,6 +124,14 @@ def _clear_report_filters() -> None:
             if name in {"expiry_from", "expiry_to"}
             else []
         )
+        
+    for keys in TRANSACTION_FILTER_KEYS.values():
+        for name, key in keys.items():
+            st.session_state[key] = (
+                None
+                if name in {"date_from", "date_to"}
+                else []
+            )
 
 
 def _choice_label(value: str | None) -> str:
@@ -216,14 +289,127 @@ def _request_filters() -> RequestFilters:
         outcomes=tuple(outcomes),
     )
 
+def _transaction_filters(records: list[dict], medications: pd.DataFrame, report_id: str) -> TransactionFilters:
+    """Filter session transactions independently of inventory filters."""
+    keys = TRANSACTION_FILTER_KEYS[report_id]
+    medication_labels = (medications.set_index("medication_id")["medication_name"].to_dict())
+
+    def choose(field, label, options, format_func=str):
+        # Remove stale choices before creating the widget.
+        current = list(st.session_state.get(keys[field], []))
+        retained = [
+            value for value in current
+            if value in options
+        ]
+
+        if retained != current:
+            st.session_state[keys[field]] = retained
+
+        return st.multiselect(
+            label,
+            options=options,
+            format_func=format_func,
+            key=keys[field],
+        )
+
+    with st.expander("Transaction filters", expanded=True):
+        st.caption(
+            "Empty selections mean all values. These filters apply "
+            "to recorded transactions in the active demo session."
+        )
+
+        medication_column, order_column, request_column = st.columns(3)
+
+        with medication_column:
+            medication_ids = choose(
+                "medication_ids",
+                "Medication",
+                sorted(medication_labels),
+                format_func=lambda medication_id: (
+                    f"{medication_labels[medication_id]} "
+                    f"({medication_id})"
+                ),
+            )
+
+        with order_column:
+            order_ids = choose(
+                "order_ids",
+                "Order ID",
+                sorted({
+                    record["order_id"]
+                    for record in records
+                }),
+            )
+
+        with request_column:
+            request_ids = choose(
+                "request_ids",
+                "Linked request ID",
+                sorted({
+                    record["linked_request_id"]
+                    for record in records
+                }),
+            )
+
+        if report_id == "session_orders":
+            statuses = choose(
+                "statuses",
+                "Order status",
+                list(ORDER_STATUS_LABELS),
+                format_func=ORDER_STATUS_LABELS.__getitem__,
+            )
+            date_label = "Order date"
+        else:
+            statuses = choose(
+                "statuses",
+                "Receipt status",
+                ["posted"],
+                format_func=lambda value: "Posted",
+            )
+            date_label = "Receipt recorded date (UTC)"
+
+        start_column, end_column = st.columns(2)
+
+        with start_column:
+            date_from = st.date_input(
+                f"{date_label} on or after — optional",
+                value=None,
+                key=keys["date_from"],
+            )
+
+        with end_column:
+            date_to = st.date_input(
+                f"{date_label} on or before — optional",
+                value=None,
+                key=keys["date_to"],
+            )
+
+        st.caption(
+            f"Date basis: {DATE_FILTER_BASIS[report_id]}. "
+            "Bounds are inclusive. Records without the relevant "
+            "date are excluded when a date bound is applied."
+        )
+
+    return TransactionFilters(
+        medication_ids=tuple(medication_ids),
+        order_ids=tuple(order_ids),
+        request_ids=tuple(request_ids),
+        statuses=tuple(statuses),
+        date_from=date_from,
+        date_to=date_to,
+    )
 
 def _render_report_table(report: pd.DataFrame, report_id: str) -> None:
-    """Pass the prepared report to existing native-export table components."""
-    display = prepare_report_display(report)
+    """Use existing table components and their native CSV controls."""
+    is_transaction = report_id in TRANSACTION_REPORT_LABELS
 
-    # A column containing numbers plus an explicit N/A label must use
-    # one compatible representation for the table's Arrow transport.
-    # Fully numeric columns remain numeric.
+    display = (
+        prepare_transaction_report_display(report)
+        if is_transaction
+        else prepare_report_display(report)
+    )
+
+    # Keep mixed numeric/N/A columns compatible with Arrow transport.
     for column in display.columns:
         values = display[column]
         has_text = values.map(lambda value: isinstance(value, str)).any()
@@ -235,22 +421,32 @@ def _render_report_table(report: pd.DataFrame, report_id: str) -> None:
     if report.empty:
         st.info("No records match this report and its filters.")
 
-    st.caption(REPORT_NOTES[report_id])
+    st.caption(VIEW_REPORT_NOTES[report_id])
     st.caption(
         f"Report rows: {len(report)}. "
         "Use the table toolbar to download the current report."
     )
 
-    if report_id in {"inventory_summary", "request_statuses", "request_summary", "abc_summary"}:
-        st.subheader(REPORT_LABELS[report_id])
-        render_workflow_table(
-            display.rename(columns=FIELD_LABELS),
-            table_key=f"reporting_{report_id}",
-        )
+    if is_transaction:
+        labels = {
+            **FIELD_LABELS,
+            **TRANSACTION_FIELD_LABELS,
+        }
+
+        if report_id == "session_receipts":
+            labels["order_status"] = "Current linked order status"
+
+        st.subheader(VIEW_REPORT_LABELS[report_id])
+        render_workflow_table(display.rename(columns=labels), table_key=f"reporting_{report_id}")
+
+    elif report_id in {"inventory_summary", "request_statuses", "request_summary", "abc_summary"}:
+        st.subheader(VIEW_REPORT_LABELS[report_id])
+        render_workflow_table(display.rename(columns=FIELD_LABELS), table_key=f"reporting_{report_id}")
+
     else:
         render_medication_table(
             display,
-            title=REPORT_LABELS[report_id],
+            title=VIEW_REPORT_LABELS[report_id],
             export_key=f"reporting_{report_id}",
         )
 
@@ -258,17 +454,19 @@ def _render_report_table(report: pd.DataFrame, report_id: str) -> None:
 def render_reporting_view(medications: pd.DataFrame) -> None:
     """Render supported reports from current shared-session readers."""
     st.write(
-        "Select a report, filter its supported content and download the displayed report table."
+        "Select a report, filter its supported content and download "
+        "the displayed report table."
     )
     st.caption(
         "Synthetic demonstration data based on project assumptions. "
-        "Reporting is open demo navigation and does not enforce authenticated access restrictions."
+        "Reporting is open demo navigation and does not enforce "
+        "authenticated access restrictions."
     )
 
     report_id = st.selectbox(
         "Report",
-        options=list(REPORT_LABELS),
-        format_func=REPORT_LABELS.__getitem__,
+        options=list(VIEW_REPORT_LABELS),
+        format_func=VIEW_REPORT_LABELS.__getitem__,
         key="workflow_ui_reporting_report",
     )
 
@@ -278,41 +476,100 @@ def render_reporting_view(medications: pd.DataFrame) -> None:
         on_click=_clear_report_filters,
     )
 
-    whole_session = report_id == "request_summary"
-    whole_population = report_id == "abc_summary"
-    inventory_filters = _inventory_filters(medications, disabled=whole_session or whole_population)
-
     try:
-        if whole_session:
-            st.info("Scope: every request in the active demo session. Inventory and request filters are not applied.")
-            report = build_request_summary(read_request_summary())
-        
-        elif whole_population:
-            st.info("Scope: every medication in the loaded session dataset. Inventory filters are not applied to ABC category totals.")
-            report = build_inventory_report(medications, "abc_summary")
-
-        elif report_id == "request_statuses":
-            request_filters = _request_filters()
-            selected_inventory = filter_inventory(medications, inventory_filters)
-
-            report = build_request_report(
-                read_requests(Role.REPORTING),
-                filters=request_filters,
-                allowed_medication_ids=tuple(selected_inventory["medication_id"]),
+        if report_id in TRANSACTION_REPORT_LABELS:
+            records = (
+                read_orders(Role.REPORTING)
+                if report_id == "session_orders"
+                else read_receipts(Role.REPORTING)
             )
-            st.caption("Scope: requests matching the selected medications and request filters.")
+
+            transaction_filters = _transaction_filters(
+                records,
+                medications,
+                report_id,
+            )
+
+            report = build_transaction_report(
+                records,
+                report_id,
+                filters=transaction_filters,
+            )
+
+            st.caption(
+                "Scope: recorded transactions in the active demo "
+                "session matching the transaction filters. "
+                "Only transaction filters apply."
+            )
 
         else:
-            report = build_inventory_report(medications, report_id, filters=inventory_filters)
-            if report_id == "stock_analytics":
-                st.caption(
-                    "Scope: displayed rows follow the inventory filters. "
-                    "ABC classes and percentages retain the complete loaded-population denominator."
+            whole_session = report_id == "request_summary"
+            whole_population = report_id == "abc_summary"
+
+            inventory_filters = _inventory_filters(
+                medications,
+                disabled=whole_session or whole_population,
+            )
+
+            if whole_session:
+                st.info(
+                    "Scope: every request in the active demo session. "
+                    "Inventory and request filters are not applied."
                 )
+                report = build_request_summary(
+                    read_request_summary()
+                )
+
+            elif whole_population:
+                st.info(
+                    "Scope: every medication in the loaded session "
+                    "dataset. Inventory filters are not applied "
+                    "to ABC category totals."
+                )
+                report = build_inventory_report(
+                    medications,
+                    "abc_summary",
+                )
+
+            elif report_id == "request_statuses":
+                request_filters = _request_filters()
+                selected_inventory = filter_inventory(
+                    medications,
+                    inventory_filters,
+                )
+
+                report = build_request_report(
+                    read_requests(Role.REPORTING),
+                    filters=request_filters,
+                    allowed_medication_ids=tuple(
+                        selected_inventory["medication_id"]
+                    ),
+                )
+
+                st.caption(
+                    "Scope: requests matching the selected "
+                    "medications and request filters."
+                )
+
             else:
-                st.caption(
-                    "Scope: the selected inventory report and filters. Inventory summary figures describe that selection."
+                report = build_inventory_report(
+                    medications,
+                    report_id,
+                    filters=inventory_filters,
                 )
+
+                if report_id == "stock_analytics":
+                    st.caption(
+                        "Scope: displayed rows follow the inventory "
+                        "filters. ABC classes and percentages retain "
+                        "the complete loaded-population denominator."
+                    )
+                else:
+                    st.caption(
+                        "Scope: the selected inventory report and "
+                        "filters. Inventory summary figures "
+                        "describe that selection."
+                    )
 
     except ValueError as error:
         st.error(str(error))
@@ -323,8 +580,9 @@ def render_reporting_view(medications: pd.DataFrame) -> None:
     st.info(
         "N/A: demand forecasting, calculated safety stock, optimized "
         "reorder points, EOQ/Newsvendor recommendations, clinical VEN "
-        "classification, inventory turnover, historical hospital stockout "
-        "or consumption trends, supplier performance, confirmed shrinkage, "
-        "hospital cost savings and patient outcomes. Required historical "
-        "records, model inputs or governed definitions are unavailable."
+        "classification, inventory turnover, historical hospital "
+        "stockout or consumption trends, supplier performance, "
+        "confirmed shrinkage, hospital cost savings and patient "
+        "outcomes. Required historical records, model inputs "
+        "or governed definitions are unavailable."
     )

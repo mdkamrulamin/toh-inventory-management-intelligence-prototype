@@ -393,7 +393,6 @@ class ReceiptQueriesSessionTests(unittest.TestCase):
 
         for role in (
             Role.EXECUTIVE,
-            Role.REPORTING,
             Role.SYSTEM,
             "unknown-role",
         ):

@@ -36,6 +36,7 @@ from src.services import receipt_queries
 from src.data.substitute_loader import load_substitute_relationships
 from src.services import substitute_queries
 from src.services import substitute_reviews as substitute_review_services
+from src.services import stock_movements
 
 STATE_KEY = "demo_state"
 NOTICE_KEY = "workflow_notice"
@@ -412,3 +413,7 @@ def read_request_alternatives(request_id: str, role: Role | str, *, state_store:
 
 def read_substitute_reviews(role: Role | str, *, request_id: str | None = None, state_store: MutableMapping | None = None) -> list[dict]:
     return substitute_queries.list_substitute_reviews(_current(_store(state_store)), role, request_id=request_id)
+
+def read_stock_movements(role: Role | str, *, state_store: MutableMapping | None = None):
+    """Read detached movement records without changing session state."""
+    return stock_movements.get_stock_movements(_current(_store(state_store)), role)

@@ -159,7 +159,7 @@ class OrderQueryTests(unittest.TestCase):
         ):
             self.assertNotIn("order_key", projection)
 
-        for role in (Role.EXECUTIVE, Role.REPORTING, Role.SYSTEM):
+        for role in (Role.EXECUTIVE, Role.SYSTEM):
             with self.subTest(role=role):
                 with self.assertRaises(WorkflowError):
                     self.details(order_id, role)

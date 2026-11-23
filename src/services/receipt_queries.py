@@ -10,6 +10,7 @@ RECEIPT_READER_ROLES = {
     Role.PHARMACIST,
     Role.PROCUREMENT,
     Role.WAREHOUSE,
+    Role.REPORTING,
 }
 
 def _reader_role(value):
@@ -87,6 +88,12 @@ def get_receipt_details(state, receipt_id, role) -> dict:
                 "provenance": receipt.provenance,
             }
         )
+        
+    if role == Role.REPORTING:
+        # These are current linked statuses, not historical snapshots of the statuses when the receipt was recorded.
+        result["order_status"] = str(order.status)
+        result["request_status"] = str(request.status)
+        
     # Supplier/cost details belong to the existing role-specific order readers. Internal receipt confirmation keys are never exposed.
     return deepcopy(result)
 

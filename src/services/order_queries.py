@@ -11,6 +11,7 @@ ORDER_READER_ROLES = {
     Role.PHARMACIST,
     Role.PROCUREMENT,
     Role.WAREHOUSE,
+    Role.REPORTING,
 }
 
 ORDER_STATUS_LABELS = {
@@ -55,6 +56,40 @@ def get_order_details(state, order_id, role, *, include_history=True) -> dict:
     if order.run_id != state.run_id or order.order_id != order_id:
         raise WorkflowError("invalid_state", "Order identity is inconsistent.")
     request = wf._request(state, order.linked_request_id)
+    
+    # Reporting receives an explicit operational projection.
+    # Commercial details, free-text order history and internal keys
+    # are excluded, including when include_history=True.
+    if role == Role.REPORTING:
+        if (
+            order.order_id not in request.order_ids 
+            or order.medication_id != request.medication_id
+            or order.unit != request.unit
+        ):
+            raise WorkflowError("invalid_state", "The order and request links are inconsistent.")
+        
+        return deepcopy(
+            {
+                "run_id": order.run_id,
+                "order_id": order.order_id,
+                "linked_request_id": order.linked_request_id,
+                "medication_id": order.medication_id,
+                "medication_name": order.medication_name,
+                "order_status": str(order.status),
+                "request_status": str(request.status),
+                "ordered_quantity": order.ordered_quantity,
+                "quantity_received": order.quantity_received,
+                "quantity_outstanding": order.quantity_outstanding,
+                "unit": order.unit,
+                "order_date": order.order_date,
+                "expected_delivery": order.expected_delivery,
+                "expected_delivery_note": order.expected_delivery_note,
+                "created_time": order.created_time,
+                "updated_time": order.updated_time,
+                "provenance": order.provenance,
+            }
+        )
+    
     result = {
         "run_id": order.run_id,
         "order_id": order.order_id,
